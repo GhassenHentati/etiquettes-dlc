@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1F2A22">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Étiquettes DLC">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%231F2A22'/%3E%3Crect x='28' y='14' width='44' height='72' rx='4' fill='none' stroke='%23ffffff' stroke-width='5'/%3E%3Cline x1='28' y1='42' x2='72' y2='42' stroke='%23ffffff' stroke-width='5'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%231F2A22'/%3E%3Crect x='28' y='14' width='44' height='72' rx='4' fill='none' stroke='%23ffffff' stroke-width='5'/%3E%3Cline x1='28' y1='42' x2='72' y2='42' stroke='%23ffffff' stroke-width='5'/%3E%3C/svg%3E">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%C3%89tiquettes%20DLC%22%2C%22short_name%22%3A%22DLC%20Frigo%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23EEF0EA%22%2C%22theme_color%22%3A%22%231F2A22%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%2527http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%2527%2520viewBox%3D%25270%25200%2520100%2520100%2527%253E%253Crect%2520width%3D%2527100%2527%2520height%3D%2527100%2527%2520rx%3D%252718%2527%2520fill%3D%2527%25231F2A22%2527%2F%253E%253Crect%2520x%3D%252728%2527%2520y%3D%252714%2527%2520width%3D%252744%2527%2520height%3D%252772%2527%2520rx%3D%25274%2527%2520fill%3D%2527none%2527%2520stroke%3D%2527%2523ffffff%2527%2520stroke-width%3D%25275%2527%2F%253E%253Cline%2520x1%3D%252728%2527%2520y1%3D%252742%2527%2520x2%3D%252772%2527%2520y2%3D%252742%2527%2520stroke%3D%2527%2523ffffff%2527%2520stroke-width%3D%25275%2527%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<title>Étiquettes DLC</title>
+<style>
+  :root{
+    --bg: #EEF0EA;
+    --surface: #FFFFFF;
+    --ink: #1F2A22;
+    --muted: #6C766A;
+    --line: #D3D8CC;
+    --fresh: #3E7A54;
+    --fresh-dim: #E4EFE6;
+    --warn: #C1402A;
+    --warn-dim: #F7E2DC;
+    --tape: #F4C64B;
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+  input, select, textarea { -webkit-user-select:text; user-select:text; }
+  body{ margin:0; background:var(--bg); color:var(--ink); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .device{ width:430px; max-width:100%; background:var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden; position:relative; }
+  .tab-strip{ display:flex; gap:2px; padding:10px 14px 0 14px; background:var(--bg); border-bottom:1px solid var(--line); }
+  .tab-strip .notch{ width:34px;height:10px; background:var(--tape); border-radius:2px 2px 0 0; opacity:.9; }
+  header.app-head{ padding:14px 20px 14px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
+  header.app-head .back-btn{ width:32px;height:32px;flex-shrink:0; border:none;background:none;cursor:pointer; display:flex;align-items:center;justify-content:center; color:var(--ink); border-radius:50%; }
+  header.app-head .back-btn:active{ background:var(--bg); }
+  header.app-head .back-btn svg{ width:18px;height:18px; }
+  header.app-head .titles{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  header.app-head .title{ font-family:"Archivo Narrow","IBM Plex Sans Condensed",sans-serif; font-weight:700; font-size:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header.app-head .sub{ font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header.app-head .head-actions{ display:flex; gap:12px; flex-shrink:0; align-items:center; }
+  header.app-head .head-action{ font-size:12px; color:var(--fresh); font-weight:600; cursor:pointer; background:none; border:none; font-family:inherit; white-space:nowrap; padding:6px 0; }
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+  .body-pad{ padding:16px 20px 20px 20px; min-height:480px; }
+
+  /* LOGIN */
+  .lockbox{ margin-top:40px; text-align:center; padding:0 20px 30px 20px; }
+  .lockbox .icon{ width:52px;height:52px; margin:0 auto 18px auto; border:2px solid var(--ink); border-radius:6px; display:flex;align-items:center;justify-content:center; }
+  .lockbox .icon svg{ width:24px; height:24px; }
+  .lockbox h1{ font-family:"Archivo Narrow",sans-serif; font-size:20px; margin:0 0 6px 0; }
+  .lockbox p.hint{ color:var(--muted); font-size:13px; margin:0 0 26px 0;}
+  .pin-dots{ display:flex; gap:14px; justify-content:center; margin-bottom:22px; }
+  .pin-dots span{ width:14px;height:14px;border-radius:50%; border:2px solid var(--ink); }
+  .pin-dots span.filled{ background:var(--ink); }
+  .pin-dots.error span{ border-color:var(--warn); }
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:260px; margin:0 auto; }
+  .keypad button{ padding:16px 0; font-size:18px; border:1px solid var(--line); background:var(--surface); border-radius:6px; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .keypad button:active{ background:var(--bg); }
+  .keypad button.wide{ color:var(--muted); font-size:13px; }
+  .err-msg{ color:var(--warn); font-size:12px; height:16px; margin-bottom:6px; }
+
+  /* GRID / TILES */
+  .grid-tiles{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .tile{ border:1px solid var(--line); border-radius:6px; padding:14px 14px 10px 14px; background:var(--surface); position:relative; min-height:96px; display:flex; flex-direction:column; }
+  .tile .peel{ position:absolute; top:0; right:0; width:0;height:0; border-style:solid; border-width:0 16px 16px 0; border-color:transparent var(--bg) transparent transparent; }
+  .tile .tile-open{ cursor:pointer; flex:1; padding-bottom:10px; }
+  .tile .name{ font-weight:600; font-size:15px; }
+  .tile .count{ font-size:12px; color:var(--muted); margin-top:4px; }
+  .tile.add{ display:flex;align-items:center;justify-content:center; border-style:dashed; color:var(--muted); font-size:14px; cursor:pointer; }
+  .tile .cat-actions{ display:flex; gap:8px; border-top:1px solid var(--line); padding-top:8px; margin-top:auto; }
+  .tile .cat-actions button{ flex:1; padding:9px 0; border:1px solid var(--line); border-radius:5px; background:var(--surface); font-size:12px; color:var(--muted); cursor:pointer; font-family:inherit; }
+  .tile .cat-actions button.danger{ color:var(--warn); border-color:var(--warn); }
+
+  #global-alert{ padding:0; }
+  #global-alert .alert-banner{ margin:12px 14px 0 14px; }
+  #global-alert.idle .alert-banner{ background:var(--warn); border-color:var(--warn); animation:pulse-alert 1.6s ease-in-out infinite; }
+  #global-alert.idle .alert-tag{ color:#fff; font-size:15px; justify-content:center; }
+  #global-alert.idle .alert-tag svg{ width:20px;height:20px; }
+  #global-alert.idle .sticker{ border-width:2px; }
+  #global-alert.idle .sticker .p-name{ font-size:26px; }
+  #global-alert.idle .sticker .p-dates{ font-size:13px; }
+  #global-alert.idle .sticker .p-dlc{ font-size:16px; }
+  #global-alert.idle .alert-nav{ color:#fff; }
+  #global-alert.idle .alert-nav button{ color:#fff; border-color:#fff; }
+  #global-alert.blocking{ position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(31,42,34,0.93); z-index:50; display:flex; align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+  #global-alert.blocking .alert-banner{ margin:0; width:100%; max-width:340px; }
+  #global-alert.blocking .block-note{ font-size:12px; color:var(--warn); text-align:center; margin-bottom:10px; font-weight:600; }
+  .device{ position:relative; }
+  #modal-layer{ display:none; position:absolute; inset:0; background:rgba(31,42,34,0.55); z-index:80; align-items:center; justify-content:center; padding:20px; }
+  #modal-layer.open{ display:flex; }
+  .modal-box{ background:var(--surface); border-radius:8px; padding:20px; width:100%; max-width:320px; }
+  .modal-box .m-title{ font-size:15px; font-weight:600; margin-bottom:8px; }
+  .modal-box .m-msg{ font-size:13px; color:var(--muted); white-space:pre-line; margin-bottom:16px; }
+  .modal-box input, .modal-box select{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:6px; font-size:14px; font-family:inherit; color:var(--ink); margin-bottom:14px; background:var(--surface); }
+  .modal-box .m-btns{ display:flex; gap:8px; }
+  .modal-box .m-btns button{ flex:1; padding:12px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; border:1px solid var(--line); background:var(--surface); color:var(--ink); }
+  .modal-box .m-btns button.primary{ background:var(--fresh); color:#fff; border-color:var(--fresh); }
+  .modal-box .m-btns button.danger{ background:var(--warn); color:#fff; border-color:var(--warn); }
+  @keyframes pulse-alert{ 0%,100%{ opacity:1; } 50%{ opacity:.72; } }
+  @media (prefers-reduced-motion: reduce){ #global-alert.idle .alert-banner{ animation:none; } }
+  .alert-banner .treat-btn{ width:100%; margin-top:10px; padding:11px; background:var(--warn); color:#fff; border:none; border-radius:5px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .alert-nav{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:11px; color:var(--warn); }
+  .alert-nav button{ background:none; border:1px solid var(--warn); color:var(--warn); border-radius:4px; padding:4px 9px; font-size:11px; cursor:pointer; font-family:inherit; }
+  .alert-banner{ display:block; background:#fff; border:2px solid var(--warn); border-radius:4px; padding:12px 14px; margin-bottom:16px; }
+  .alert-banner .alert-tag{ display:flex; align-items:center; gap:6px; font-size:10px; color:var(--warn); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+  .alert-banner .alert-tag svg{ width:13px;height:13px; flex-shrink:0; }
+  .alert-banner .sticker{ border-color:var(--warn); }
+  .alert-banner .sticker .p-name{ color:var(--warn); }
+  .alert-banner .sticker .p-dlc{ color:var(--warn); }
+  .alert-banner .more-note{ font-size:11px; color:var(--warn); margin-top:8px; text-align:right; }
+  .no-alert{ font-size:12px; color:var(--muted); margin-bottom:16px; }
+
+  .prod-row{ display:flex; align-items:center; justify-content:space-between; padding:14px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .prod-row:last-child{ border-bottom:none; }
+  .prod-row .name{ font-size:14px; }
+  .prod-row .right{ display:flex; align-items:center; gap:8px; }
+  .prod-row .delay{ font-size:12px; color:var(--muted); }
+  .fridge-tag{ font-size:11px; color:var(--fresh); border:1px solid var(--fresh); border-radius:20px; padding:2px 8px; white-space:nowrap; }
+  .fridge-tag.expired{ color:var(--warn); border-color:var(--warn); }
+  .add-line{ margin-top:14px; padding:12px 4px; border-top:1px dashed var(--line); color:var(--fresh); font-size:13px; cursor:pointer; font-weight:600; }
+  .empty-hint{ color:var(--muted); font-size:13px; padding:20px 4px; }
+
+  .field{ margin-bottom:18px; }
+  .field label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+  .field input[type=text], .field input[type=number]{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:6px; font-size:14px; font-family:inherit; color:var(--ink); }
+  .field .value-row{ display:flex; align-items:center; justify-content:space-between; border:1px solid var(--line); border-radius:6px; padding:10px 12px; }
+  .stepper{ display:flex; align-items:center; gap:12px; }
+  .stepper button{ width:28px;height:28px;border-radius:50%;border:1px solid var(--ink); background:none;font-size:16px;cursor:pointer;line-height:1; }
+  .btn-primary{ width:100%; padding:14px; background:var(--fresh); color:#fff; border:none;border-radius:6px;font-size:14px;font-weight:600; cursor:pointer; margin-top:4px; }
+  .btn-dark{ width:100%; padding:14px; background:var(--ink); color:#fff; border:none;border-radius:6px;font-size:14px;font-weight:600; cursor:pointer; margin-top:8px; }
+  .btn-danger-text{ text-align:center; color:var(--warn); font-size:13px; margin-top:16px; cursor:pointer; }
+
+  .label-preview{ margin-top:22px; border:2px dashed var(--line); border-radius:4px; padding:16px; background:var(--bg); }
+  .label-preview .caption{ font-size:11px; color:var(--muted); margin-bottom:8px; }
+  .sticker{ background:#fff; border:1px solid var(--ink); padding:10px 12px; font-family:"Archivo Narrow",sans-serif; }
+  .sticker .p-name{ font-size:17px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .sticker .p-dates{ display:flex; justify-content:space-between; margin-top:6px; font-size:11px; color:var(--muted); font-family:"IBM Plex Sans",sans-serif;}
+  .sticker .p-dlc{ margin-top:2px; font-size:13px; font-weight:600; }
+
+  .fridge-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:6px; }
+  .fridge-sq{ aspect-ratio:1/1; border:1px solid var(--line); border-radius:6px; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; font-size:13px; font-weight:600; padding:6px; text-align:center; }
+  .fridge-sq svg{ width:22px;height:22px; }
+  .fridge-sq.selected{ border-color:var(--fresh); background:var(--fresh-dim); color:var(--fresh); }
+  .fridge-sq.add{ border-style:dashed; color:var(--muted); font-weight:400; }
+
+  .fridge-list-row{ padding:14px 4px; border-bottom:1px solid var(--line); }
+  .fridge-list-row:last-child{ border-bottom:none; }
+  .fridge-list-row .fname{ font-weight:600; font-size:14px; margin-bottom:6px; }
+  .fridge-list-row .fprods{ font-size:12px; color:var(--muted); }
+  .fridge-list-row .fprods .expired{ color:var(--warn); font-weight:600; }
+
+  .navbar{ display:flex; border-top:1px solid var(--line); background:var(--surface); }
+  .navbar button{ flex:1; padding:12px 0; background:none; border:none; font-size:11px; color:var(--muted); cursor:pointer; font-family:inherit; }
+  .navbar button.active{ color:var(--fresh); font-weight:600; }
+  .loading-note{ text-align:center; color:var(--muted); font-size:12px; padding:40px 20px; }
+
+  /* MANAGE SCREEN */
+  .subtabs{ display:flex; flex-wrap:wrap; gap:6px; padding:12px 20px 0 20px; }
+  .subtabs button{ flex:1 1 auto; min-width:78px; padding:9px 6px; border:1px solid var(--line); background:var(--surface); border-radius:6px; font-size:12px; color:var(--muted); cursor:pointer; font-family:inherit; }
+  .subtabs button.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .manage-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 4px; border-bottom:1px solid var(--line); gap:10px; }
+  .manage-row:last-child{ border-bottom:none; }
+  .manage-row .info{ flex:1; min-width:0; }
+  .manage-row .info .mname{ font-size:14px; font-weight:600; }
+  .manage-row .info .msub{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .manage-row .mactions{ display:flex; gap:6px; flex-shrink:0; }
+  .manage-row .mactions button{ padding:7px 10px; border:1px solid var(--line); border-radius:5px; background:var(--surface); font-size:11px; color:var(--muted); cursor:pointer; font-family:inherit; }
+  .manage-row .mactions button.danger{ color:var(--warn); border-color:var(--warn); }
+  .manage-add-btn{ margin:14px 20px 0 20px; }
+  .log-row{ display:flex; gap:10px; padding:11px 4px; border-bottom:1px solid var(--line); align-items:flex-start; }
+  .log-row:last-child{ border-bottom:none; }
+  .log-row .lico{ width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700; }
+  .log-row .lico.print{ background:var(--fresh-dim); color:var(--fresh); }
+  .log-row .lico.treated{ background:var(--warn-dim); color:var(--warn); }
+  .log-row .linfo{ flex:1; min-width:0; }
+  .log-row .lname{ font-size:13px; font-weight:600; }
+  .log-row .lmeta{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .log-filters{ display:flex; gap:6px; margin-bottom:10px; }
+  .log-filters button{ flex:1; padding:7px 0; border:1px solid var(--line); background:var(--surface); border-radius:5px; font-size:11px; color:var(--muted); cursor:pointer; font-family:inherit; }
+  .log-filters button.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  /* PRINT LABEL (thermal receipt style) */
+  #print-area{ display:none; }
+  @media print{
+    body *{ visibility:hidden; }
+    #print-area, #print-area *{ visibility:visible; }
+    #print-area{ display:block; position:fixed; top:0; left:0; width:50mm; padding:2mm; }
+    #print-area .p-name{ font-size:14pt; font-weight:700; text-transform:uppercase; }
+    #print-area .p-line{ font-size:9pt; margin-top:2mm; }
+    #print-area .p-dlc{ font-size:11pt; font-weight:700; margin-top:1mm; }
+    #print-area .p-emp{ font-size:8pt; text-align:right; margin-top:3mm; color:#333; }
+  }
+  .sticker .p-emp{ text-align:right; font-size:10px; color:var(--muted); margin-top:6px; font-family:"IBM Plex Sans",sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="tab-strip"><div class="notch"></div></div>
+  <div id="global-alert"></div>
+  <div id="modal-layer"><div class="modal-box" id="modal-box"></div></div>
+
+  <!-- LOGIN -->
+  <!-- LOGIN -->
+  <div class="screen active" id="login-who">
+    <div class="lockbox">
+      <h1>Étiquettes DLC</h1>
+      <p style="color:var(--muted);font-size:10px;margin:6px 0 22px 0;">build 2026-09-17 · serveur v1</p>
+      <div class="fridge-grid" id="employee-grid" style="max-width:290px;margin:0 auto;"></div>
+      <div class="btn-danger-text" style="color:var(--muted);margin-top:20px;" onclick="startAdminLogin()">Accès administrateur</div>
+
+    </div>
+  </div>
+
+  <!-- LOGIN STEP 2: pin -->
+  <div class="screen" id="login-pin">
+    <div class="lockbox">
+      <h1 id="pin-title">Code</h1>
+      <p class="hint" id="pin-hint">Entrer le code d'accès</p>
+      <div class="err-msg" id="login-err"></div>
+      <div class="pin-dots" id="pin-dots"><span id="d1"></span><span id="d2"></span><span id="d3"></span><span id="d4"></span></div>
+      <div class="keypad" id="keypad">
+        <button data-n="1">1</button><button data-n="2">2</button><button data-n="3">3</button>
+        <button data-n="4">4</button><button data-n="5">5</button><button data-n="6">6</button>
+        <button data-n="7">7</button><button data-n="8">8</button><button data-n="9">9</button>
+        <button class="wide" id="clear">effacer</button><button data-n="0">0</button><button class="wide" id="back">←</button>
+      </div>
+      <div class="btn-danger-text" style="color:var(--muted);" onclick="historyStack=[];show('login-who');renderEmployeeGrid();">‹ Retour</div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD (categories) -->
+  <div class="screen" id="dashboard">
+    <header class="app-head"><div class="titles"><div class="title">Catégories</div><div class="sub" id="dash-sub"></div></div><div class="head-actions"><button class="head-action" id="settings-btn" onclick="go('settings')">Réglages</button><button class="head-action" style="color:var(--muted);" onclick="logout()">Sortir</button></div></header>
+    <div class="body-pad" id="dash-body"></div>
+  </div>
+
+  <!-- PRODUCTS in category -->
+  <div class="screen" id="products">
+    <header class="app-head">
+      <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titles"><div class="title" id="cat-title"></div><div class="sub" id="cat-sub"></div></div>
+    </header>
+    <div class="body-pad" id="products-body"></div>
+  </div>
+
+  <!-- ADD CATEGORY -->
+  <div class="screen" id="add-category">
+    <header class="app-head">
+      <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titles"><div class="title">Nouvelle catégorie</div></div>
+    </header>
+    <div class="body-pad">
+      <div class="field"><label>Nom de la catégorie</label><input type="text" id="new-cat-name" placeholder="ex : Poissons"></div>
+      <button class="btn-primary" onclick="submitNewCategory()">Créer la catégorie</button>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT PRODUCT -->
+  <div class="screen" id="add-product">
+    <header class="app-head">
+      <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titles"><div class="title" id="addprod-title">Nouveau produit</div></div>
+    </header>
+    <div class="body-pad">
+      <div class="field"><label>Nom du produit</label><input type="text" id="new-prod-name" placeholder="ex : Poulet cuit"></div>
+      <div class="field">
+        <label>Frigo</label>
+        <div class="value-row" onclick="openFridgePicker('new')" style="cursor:pointer;">
+          <span id="new-prod-fridge-label">Choisir un frigo</span>
+          <span style="color:var(--muted);font-size:12px;">changer ›</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Délai avant DLC (jours après impression)</label>
+        <div class="value-row">
+          <span>Jours</span>
+          <div class="stepper"><button onclick="stepNewDelay(-1)">−</button><span id="new-prod-delay">3</span><button onclick="stepNewDelay(1)">+</button></div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="submitNewProduct()">Enregistrer le produit</button>
+    </div>
+  </div>
+
+  <!-- PRODUCT DETAIL -->
+  <div class="screen" id="product">
+    <header class="app-head">
+      <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titles"><div class="title" id="prod-title"></div><div class="sub" id="prod-sub"></div></div>
+    </header>
+    <div class="body-pad">
+      <div class="field">
+        <label>Frigo</label>
+        <div class="value-row" onclick="openFridgePicker('existing')" style="cursor:pointer;">
+          <span id="current-fridge"></span>
+          <span style="color:var(--muted);font-size:12px;">changer ›</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Délai avant DLC</label>
+        <div class="value-row">
+          <span id="prod-delay-label"></span>
+          <div class="stepper"><button onclick="stepProdDelay(-1)">−</button><span id="prod-delay-val"></span><button onclick="stepProdDelay(1)">+</button></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Date du jour</label>
+        <div class="value-row"><span id="today-lbl"></span><span style="color:var(--muted);font-size:12px;">auto</span></div>
+      </div>
+      <button class="btn-dark" onclick="printLabel()">Imprimer l'étiquette</button>
+      <div class="label-preview">
+        <div class="caption">Aperçu de l'étiquette</div>
+        <div class="sticker">
+          <div class="p-name" id="preview-name"></div>
+          <div class="p-dates"><span id="preview-date"></span><span id="preview-fridge"></span></div>
+          <div class="p-dlc" id="preview-dlc"></div>
+          <div class="p-emp" id="preview-emp"></div>
+        </div>
+      </div>
+      <div class="btn-danger-text" id="delete-prod-btn" onclick="deleteProduct()">Supprimer ce produit</div>
+    </div>
+  </div>
+
+  <!-- FRIDGE PICKER -->
+  <div class="screen" id="fridge-picker">
+    <header class="app-head">
+      <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titles"><div class="title">Frigo</div><div class="sub" id="fridgepicker-sub"></div></div>
+    </header>
+    <div class="body-pad"><div class="fridge-grid" id="fridge-grid"></div></div>
+  </div>
+
+  <!-- MANAGE (dashboard central) -->
+  <div class="screen" id="manage">
+    <header class="app-head"><div class="titles"><div class="title">Gestion</div><div class="sub">Tout modifier</div></div><div class="head-actions"><button class="head-action" style="color:var(--muted);" onclick="logout()">Sortir</button></div></header>
+    <div class="subtabs" id="manage-subtabs">
+      <button data-tab="cats" class="active">Catégories</button>
+      <button data-tab="prods">Produits</button>
+      <button data-tab="fridges">Frigos</button>
+      <button data-tab="users">Utilisateurs</button>
+      <button data-tab="log">Historique</button>
+    </div>
+    <div class="body-pad" id="manage-body" style="padding-top:14px;"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="settings">
+    <header class="app-head">
+      <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titles"><div class="title">Réglages</div></div>
+    </header>
+    <div class="body-pad">
+      <div class="field"><label>Code d'accès actuel</label><input type="text" inputmode="numeric" maxlength="4" id="pwd-current" placeholder="••••"></div>
+      <div class="field"><label>Nouveau code d'accès (4 chiffres)</label><input type="text" inputmode="numeric" maxlength="4" id="pwd-new" placeholder="ex : 5678"></div>
+      <div class="field"><label>Confirmer le nouveau code</label><input type="text" inputmode="numeric" maxlength="4" id="pwd-confirm" placeholder="ex : 5678"></div>
+      <div class="err-msg" id="pwd-err" style="height:auto;margin-bottom:10px;"></div>
+      <button class="btn-primary" onclick="submitPasswordChange()">Changer le code d'accès</button>
+
+      <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line);">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;">Sur l'écran d'accueil</label>
+        <button class="btn-dark" id="install-btn" onclick="triggerInstall()">Ajouter l'icône à l'écran d'accueil</button>
+        <p id="install-hint" style="color:var(--muted);font-size:12px;margin-top:10px;">Si rien ne se passe : ouvrez le menu ⋮ du navigateur puis choisissez "Ajouter à l'écran d'accueil" ou "Installer l'application".</p>
+      </div>
+
+      <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line);">
+      </div>
+    </div>
+  </div>
+
+  <!-- FRIDGES TAB -->
+  <div class="screen" id="fridges">
+    <header class="app-head"><div class="titles"><div class="title">Frigos</div><div class="sub">Vue par emplacement</div></div><div class="head-actions"><button class="head-action" style="color:var(--muted);" onclick="logout()">Sortir</button></div></header>
+    <div class="body-pad" id="fridges-body"></div>
+  </div>
+
+  <!-- PRINTED CONFIRMATION -->
+  <div class="screen" id="printed">
+    <header class="app-head">
+      <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="titles"><div class="title" style="font-size:16px;">Impression</div></div>
+    </header>
+    <div style="padding:60px 20px; text-align:center;">
+      <div class="icon" style="margin:0 auto 18px auto; border-color:var(--fresh); color:var(--fresh);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="24" height="24"><path d="M5 12l4 4 10-10"/></svg>
+      </div>
+      <h1 style="font-family:'Archivo Narrow',sans-serif;font-size:19px;margin:0 0 8px 0;">Étiquette envoyée</h1>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 26px 0;">L'imprimante à étiquettes va sortir<br>le ticket autocollant.</p>
+      <button class="btn-primary" style="max-width:220px;margin:0 auto;" onclick="historyStack=[];show('dashboard');renderDashboard();">Retour aux catégories</button>
+      <p style="color:var(--muted);font-size:12px;margin-top:16px;">Déconnexion dans <span id="printed-countdown">30</span> s</p>
+    </div>
+  </div>
+
+  <div class="navbar" id="navbar">
+    <button data-screen="dashboard">Catégories</button>
+    <button data-screen="fridges">Frigos</button>
+    <button data-screen="manage">Gestion</button>
+  </div>
+</div>
+
+<div id="print-area">
+  <div class="p-name" id="print-name"></div>
+  <div class="p-line" id="print-line"></div>
+  <div class="p-dlc" id="print-dlc"></div>
+  <div class="p-emp" id="print-emp"></div>
+</div>
+
+<script>
+/* ---------------- State & API ---------------- */
+let state = null;
+let current = 'login-who';
+let historyStack = [];
+let ctx = { categoryId:null, productId:null, fridgePickerFor:null, newProdCategoryId:null };
+let pin = '';
+
+function pad2(n){ return n.toString().padStart(2,'0'); }
+function localISO(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+function todayISO(){ return localISO(new Date()); }
+function todayStr(){ return new Date().toLocaleDateString('fr-FR'); }
+function addDaysISO(iso, days){
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return localISO(d);
+}
+function isoToFr(iso){
+  if(!iso) return '-';
+  const short = String(iso).slice(0,10);
+  const [y,m,d] = short.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// Toutes les donnees viennent du serveur : chaque tablette voit la meme chose.
+async function api(path, options){
+  const res = await fetch('/api' + path, Object.assign({
+    headers: { 'Content-Type': 'application/json' }
+  }, options || {}));
+  if(!res.ok){
+    let msg = 'Erreur serveur';
+    try{ const j = await res.json(); if(j.error) msg = j.error; }catch(e){}
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
+  if(res.status === 204) return null;
+  return res.json();
+}
+
+// Convertit les donnees du serveur (snake_case) vers le format utilise par l'interface.
+function normalizeState(raw){
+  return {
+    employees: raw.employees.map(e=>({ id:String(e.id), name:e.name, code:e.code })),
+    fridges: raw.fridges.map(f=>({ id:String(f.id), name:f.name })),
+    categories: raw.categories.map(c=>({ id:String(c.id), name:c.name })),
+    products: raw.products.map(p=>({
+      id: String(p.id),
+      name: p.name,
+      categoryId: String(p.category_id),
+      fridgeId: p.fridge_id === null ? null : String(p.fridge_id),
+      delayDays: p.delay_days,
+      lastPrinted: p.last_dlc_date ? {
+        printDate: String(p.last_print_date).slice(0,10),
+        dlcDate: String(p.last_dlc_date).slice(0,10),
+        employee: p.last_print_employee || ''
+      } : null
+    })),
+    log: []
+  };
+}
+
+async function loadState(){
+  const raw = await api('/state');
+  state = normalizeState(raw);
+}
+
+// Recharge depuis le serveur puis rafraichit l'ecran courant.
+async function syncState(){
+  await loadState();
+  refreshCurrentScreen();
+}
+
+/* ---------------- Navigation ---------------- */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('navbar').style.display = (id==='login-who' || id==='login-pin') ? 'none' : 'flex';
+  document.querySelectorAll('#navbar button').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
+  current = id;
+  renderGlobalAlert();
+  if(id==='login-who' || id==='login-pin'){
+    clearAutoLogout();
+  } else if(id==='printed'){
+    if(idleTimer){ clearTimeout(idleTimer); idleTimer = null; }
+    armPrintedTimer();
+  } else {
+    if(printedTimer){ clearTimeout(printedTimer); printedTimer = null; }
+    resetIdleTimer();
+  }
+}
+function go(id){
+  if(current !== id){ historyStack.push(current); }
+  show(id);
+}
+function goBack(){
+  const prev = historyStack.pop() || 'dashboard';
+  show(prev);
+  if(prev==='dashboard') renderDashboard();
+  if(prev==='products') renderProducts();
+  if(prev==='product') renderProductDetail();
+  if(prev==='fridges') renderFridges();
+  if(prev==='manage') renderManage();
+}
+
+/* ---------------- Helpers ---------------- */
+function fridgeName(id){ const f = state.fridges.find(x=>x.id===id); return f ? f.name : '—'; }
+function categoryProducts(catId){ return state.products.filter(p=>p.categoryId===catId); }
+function isExpired(p){
+  if(!p.lastPrinted) return false;
+  return todayISO() > p.lastPrinted.dlcDate;
+}
+function allExpiredProducts(){ return state.products.filter(isExpired); }
+
+/* ---------------- Auto-logout ---------------- */
+const IDLE_MS = 60000;        // 1 minute sans activité
+const PRINTED_MS = 30000;     // 30 s sur l'écran de confirmation d'impression
+let idleTimer = null;
+let printedTimer = null;
+let countdownTimer = null;
+
+function clearAutoLogout(){
+  if(idleTimer){ clearTimeout(idleTimer); idleTimer = null; }
+  if(printedTimer){ clearTimeout(printedTimer); printedTimer = null; }
+  if(countdownTimer){ clearInterval(countdownTimer); countdownTimer = null; }
+}
+function autoLogout(){
+  clearAutoLogout();
+  closeModal();
+  logout();
+}
+function resetIdleTimer(){
+  if(idleTimer){ clearTimeout(idleTimer); idleTimer = null; }
+  // Pas de minuterie si personne n'est connecté
+  if(!currentUser) return;
+  idleTimer = setTimeout(autoLogout, IDLE_MS);
+}
+function armPrintedTimer(){
+  if(printedTimer){ clearTimeout(printedTimer); printedTimer = null; }
+  if(countdownTimer){ clearInterval(countdownTimer); countdownTimer = null; }
+  if(!currentUser) return;
+  let left = PRINTED_MS / 1000;
+  const el = document.getElementById('printed-countdown');
+  if(el) el.textContent = left;
+  countdownTimer = setInterval(()=>{
+    left--;
+    const e = document.getElementById('printed-countdown');
+    if(e) e.textContent = Math.max(0,left);
+    if(left <= 0) clearInterval(countdownTimer);
+  }, 1000);
+  printedTimer = setTimeout(autoLogout, PRINTED_MS);
+}
+['click','touchstart','keydown'].forEach(evt=>{
+  document.addEventListener(evt, ()=>{
+    if(current !== 'printed') resetIdleTimer();
+  }, true);
+});
+
+/* ---------------- Activity log (journalise cote serveur) ---------------- */
+function formatLogTime(iso){
+  const d = new Date(iso);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)} à ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/* ---------------- In-app dialogs (native confirm/prompt are blocked here) ---------------- */
+function closeModal(){
+  document.getElementById('modal-layer').classList.remove('open');
+  document.getElementById('modal-box').innerHTML = '';
+}
+function uiAlert(msg, title){
+  return new Promise(resolve=>{
+    const box = document.getElementById('modal-box');
+    box.innerHTML = `
+      ${title ? `<div class="m-title">${title}</div>` : ''}
+      <div class="m-msg">${msg}</div>
+      <div class="m-btns"><button class="primary" id="m-ok">OK</button></div>`;
+    document.getElementById('modal-layer').classList.add('open');
+    box.querySelector('#m-ok').onclick = ()=>{ closeModal(); resolve(true); };
+  });
+}
+function uiConfirm(msg, title, opts){
+  opts = opts || {};
+  return new Promise(resolve=>{
+    const box = document.getElementById('modal-box');
+    box.innerHTML = `
+      ${title ? `<div class="m-title">${title}</div>` : ''}
+      <div class="m-msg">${msg}</div>
+      <div class="m-btns">
+        <button id="m-no">${opts.cancelText || 'Annuler'}</button>
+        <button class="${opts.danger ? 'danger' : 'primary'}" id="m-yes">${opts.okText || 'Confirmer'}</button>
+      </div>`;
+    document.getElementById('modal-layer').classList.add('open');
+    box.querySelector('#m-no').onclick = ()=>{ closeModal(); resolve(false); };
+    box.querySelector('#m-yes').onclick = ()=>{ closeModal(); resolve(true); };
+  });
+}
+function uiPrompt(msg, defaultValue, title, opts){
+  opts = opts || {};
+  return new Promise(resolve=>{
+    const box = document.getElementById('modal-box');
+    box.innerHTML = `
+      ${title ? `<div class="m-title">${title}</div>` : ''}
+      <div class="m-msg">${msg}</div>
+      <input type="text" id="m-input" value="${(defaultValue||'').replace(/"/g,'&quot;')}" ${opts.numeric ? 'inputmode="numeric" maxlength="4"' : ''}>
+      <div class="m-btns">
+        <button id="m-no">Annuler</button>
+        <button class="primary" id="m-yes">Valider</button>
+      </div>`;
+    document.getElementById('modal-layer').classList.add('open');
+    const input = box.querySelector('#m-input');
+    setTimeout(()=>{ input.focus(); input.select(); }, 50);
+    box.querySelector('#m-no').onclick = ()=>{ closeModal(); resolve(null); };
+    box.querySelector('#m-yes').onclick = ()=>{ const v = input.value; closeModal(); resolve(v); };
+    input.onkeydown = (e)=>{ if(e.key==='Enter'){ const v = input.value; closeModal(); resolve(v); } };
+  });
+}
+function uiChoose(msg, options, title){
+  return new Promise(resolve=>{
+    const box = document.getElementById('modal-box');
+    box.innerHTML = `
+      ${title ? `<div class="m-title">${title}</div>` : ''}
+      <div class="m-msg">${msg}</div>
+      <select id="m-select">${options.map((o,i)=>`<option value="${i}">${o}</option>`).join('')}</select>
+      <div class="m-btns">
+        <button id="m-no">Annuler</button>
+        <button class="primary" id="m-yes">Valider</button>
+      </div>`;
+    document.getElementById('modal-layer').classList.add('open');
+    const sel = box.querySelector('#m-select');
+    box.querySelector('#m-no').onclick = ()=>{ closeModal(); resolve(null); };
+    box.querySelector('#m-yes').onclick = ()=>{ const v = parseInt(sel.value,10); closeModal(); resolve(v); };
+  });
+}
+
+/* ---------------- Global alert (visible on every screen) ---------------- */
+let alertIndex = 0;
+function renderGlobalAlert(){
+  const el = document.getElementById('global-alert');
+  if(!el) return;
+  const onLogin = (current==='login-who' || current==='login-pin');
+  const expired = allExpiredProducts();
+  if(!expired.length){ el.innerHTML = ''; el.classList.remove('idle','blocking'); return; }
+  const blocking = !onLogin;
+  el.classList.toggle('idle', onLogin);
+  el.classList.toggle('blocking', blocking);
+  if(alertIndex >= expired.length) alertIndex = 0;
+  const p = expired[alertIndex];
+  el.innerHTML = `<div class="alert-banner">
+    ${blocking ? `<div class="block-note">${expired.length} produit${expired.length>1?'s':''} à traiter avant de continuer</div>` : ''}
+    <div class="alert-tag">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      DLC dépassée
+    </div>
+    <div class="sticker">
+      <div class="p-name">${p.name}</div>
+      <div class="p-dates"><span>Imprimé ${isoToFr(p.lastPrinted.printDate).slice(0,5)}</span><span>${fridgeName(p.fridgeId)}</span></div>
+      <div class="p-dlc">À consommer avant le ${isoToFr(p.lastPrinted.dlcDate)}</div>
+    </div>
+    ${onLogin
+      ? `<div style="text-align:center;font-size:14px;color:#fff;font-weight:600;margin-top:12px;">À retirer du ${fridgeName(p.fridgeId)} — connecte-toi pour confirmer</div>`
+      : `<button class="treat-btn" onclick="confirmTreated('${p.id}')">J'ai traité ce produit</button>`}
+    ${expired.length>1 ? `<div class="alert-nav">
+      <button onclick="cycleAlert(-1)">‹</button>
+      <span>${alertIndex+1} / ${expired.length} produits concernés</span>
+      <button onclick="cycleAlert(1)">›</button>
+    </div>` : ''}
+  </div>`;
+}
+function cycleAlert(delta){
+  const expired = allExpiredProducts();
+  if(!expired.length) return;
+  alertIndex = (alertIndex + delta + expired.length) % expired.length;
+  renderGlobalAlert();
+}
+async function confirmTreated(prodId){
+  const p = state.products.find(x=>x.id===prodId);
+  if(!p) return;
+  const who = currentUser ? (currentUser.name || 'Admin') : '';
+  const ok = await uiConfirm(`${p.name} — ${fridgeName(p.fridgeId)}`, 'Confirmer le traitement ?', {okText:'Oui, traité', danger:true});
+  if(!ok) return;
+  try{
+    await api('/products/' + p.id + '/treated', {
+      method:'POST', body: JSON.stringify({ employee: who })
+    });
+    await loadState();
+  }catch(e){ await uiAlert(e.message); return; }
+  alertIndex = 0;
+
+  const newDlc = addDaysISO(todayISO(), p.delayDays);
+  const reprint = await uiConfirm(
+    `Nouvelle DLC : ${isoToFr(newDlc)}\n(+${p.delayDays} jour${p.delayDays>1?'s':''})`,
+    `Imprimer une nouvelle étiquette pour ${p.name} ?`,
+    {okText:'Imprimer', cancelText:'Non merci'}
+  );
+  if(reprint){
+    ctx.productId = p.id;
+    ctx.categoryId = p.categoryId;
+    await printLabel();
+    return;
+  }
+  refreshCurrentScreen();
+}
+function refreshCurrentScreen(){
+  renderGlobalAlert();
+  if(current==='dashboard') renderDashboard();
+  if(current==='products') renderProducts();
+  if(current==='product') renderProductDetail();
+  if(current==='fridges') renderFridges();
+  if(current==='manage') renderManage();
+}
+
+/* ---------------- Dashboard (categories) ---------------- */
+function renderDashboard(){
+  document.getElementById('dash-sub').textContent = state.fridges.length + ' frigos suivis';
+  const isAdmin = currentUser && currentUser.type==='admin';
+  const body = document.getElementById('dash-body');
+  let tiles = state.categories.map(c=>{
+    const count = categoryProducts(c.id).length;
+    const actions = isAdmin ? `
+      <div class="cat-actions">
+        <button onclick="renameCategory('${c.id}')">Renommer</button>
+        <button class="danger" onclick="deleteCategory('${c.id}')">Supprimer</button>
+      </div>` : '';
+    return `<div class="tile">
+      <div class="peel"></div>
+      <div class="tile-open" onclick="openCategory('${c.id}')">
+        <div class="name">${c.name}</div><div class="count">${count} produit${count>1?'s':''}</div>
+      </div>
+      ${actions}
+    </div>`;
+  }).join('');
+  const addTile = isAdmin ? `<div class="tile add" onclick="go('add-category')">+ Catégorie</div>` : '';
+  body.innerHTML = `<div class="grid-tiles">${tiles}${addTile}</div>`;
+}
+function openCategory(catId){ ctx.categoryId = catId; go('products'); renderProducts(); }
+function openProductFromAlert(prodId){ ctx.productId = prodId; const p = state.products.find(x=>x.id===prodId); ctx.categoryId = p.categoryId; historyStack=['dashboard']; show('product'); renderProductDetail(); }
+
+async function submitNewCategory(){
+  const input = document.getElementById('new-cat-name');
+  const name = input.value.trim();
+  if(!name) return;
+  try{
+    await api('/categories', { method:'POST', body: JSON.stringify({ name }) });
+    input.value='';
+    await loadState();
+    goBack();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function renameCategory(catId){
+  const cat = state.categories.find(c=>c.id===catId);
+  if(!cat) return;
+  const name = await uiPrompt('Nom de la catégorie', cat.name, 'Renommer');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/categories/' + catId, { method:'PUT', body: JSON.stringify({ name: name.trim() }) });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function deleteCategory(catId){
+  const cat = state.categories.find(c=>c.id===catId);
+  if(!cat) return;
+  const prods = categoryProducts(catId);
+  const msg = prods.length
+    ? `Supprimer "${cat.name}" supprimera aussi ses ${prods.length} produit${prods.length>1?'s':''}. Continuer ?`
+    : `Supprimer la catégorie "${cat.name}" ?`;
+  if(!await uiConfirm(msg, 'Supprimer la catégorie', {okText:'Supprimer', danger:true})) return;
+  try{
+    await api('/categories/' + catId, { method:'DELETE' });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+
+/* ---------------- Products in category ---------------- */
+function renderProducts(){
+  const cat = state.categories.find(c=>c.id===ctx.categoryId);
+  document.getElementById('cat-title').textContent = cat ? cat.name : '';
+  const prods = categoryProducts(ctx.categoryId);
+  document.getElementById('cat-sub').textContent = prods.length + ' produit' + (prods.length>1?'s':'');
+  const body = document.getElementById('products-body');
+  let rows = prods.map(p=>{
+    const exp = isExpired(p);
+    return `<div class="prod-row" onclick="openProduct('${p.id}')">
+      <div class="name">${p.name}</div>
+      <div class="right"><span class="fridge-tag ${exp?'expired':''}">${fridgeName(p.fridgeId)}</span><span class="delay">+${p.delayDays} j</span></div>
+    </div>`;
+  }).join('');
+  if(!prods.length) rows = `<div class="empty-hint">Aucun produit dans cette catégorie pour l'instant.</div>`;
+  const isAdmin = currentUser && currentUser.type==='admin';
+  const addLine = isAdmin ? `<div class="add-line" onclick="openAddProduct()">+ Ajouter un produit</div>` : '';
+  body.innerHTML = rows + addLine;
+}
+function openProduct(prodId){ ctx.productId = prodId; go('product'); renderProductDetail(); }
+function openAddProduct(){
+  ctx.newProdCategoryId = ctx.categoryId;
+  newDelay = 3;
+  document.getElementById('new-prod-name').value='';
+  document.getElementById('new-prod-delay').textContent='3';
+  document.getElementById('new-prod-fridge-label').textContent='Choisir un frigo';
+  document.getElementById('new-prod-fridge-label').dataset.fridgeId='';
+  document.getElementById('addprod-title').textContent='Nouveau produit';
+  go('add-product');
+}
+let newDelay = 3;
+function stepNewDelay(delta){
+  newDelay = Math.max(1, newDelay + delta);
+  document.getElementById('new-prod-delay').textContent = newDelay;
+}
+async function submitNewProduct(){
+  const name = document.getElementById('new-prod-name').value.trim();
+  const fridgeId = document.getElementById('new-prod-fridge-label').dataset.fridgeId;
+  if(!name){ uiAlert('Merci de saisir un nom de produit.'); return; }
+  if(!fridgeId){ uiAlert('Merci de choisir un frigo.'); return; }
+  try{
+    await api('/products', { method:'POST', body: JSON.stringify({
+      name, categoryId: ctx.newProdCategoryId, fridgeId, delayDays: newDelay
+    })});
+    newDelay = 3;
+    await loadState();
+    goBack();
+  }catch(e){ await uiAlert(e.message); }
+}
+
+/* ---------------- Product detail ---------------- */
+function renderProductDetail(){
+  const p = state.products.find(x=>x.id===ctx.productId);
+  if(!p) return;
+  const cat = state.categories.find(c=>c.id===p.categoryId);
+  document.getElementById('prod-title').textContent = p.name;
+  document.getElementById('prod-sub').textContent = cat ? cat.name : '';
+  document.getElementById('current-fridge').textContent = fridgeName(p.fridgeId);
+  document.getElementById('prod-delay-label').textContent = p.delayDays + ' jour' + (p.delayDays>1?'s':'') + ' après impression';
+  document.getElementById('prod-delay-val').textContent = p.delayDays;
+  document.getElementById('today-lbl').textContent = todayStr();
+  document.getElementById('preview-name').textContent = p.name;
+  document.getElementById('preview-date').textContent = 'Imprimé ' + todayStr().slice(0,5);
+  document.getElementById('preview-fridge').textContent = fridgeName(p.fridgeId);
+  const dlcISO = addDaysISO(todayISO(), p.delayDays);
+  document.getElementById('preview-dlc').textContent = 'À consommer avant le ' + isoToFr(dlcISO);
+  document.getElementById('preview-emp').textContent = currentUser ? (currentUser.name || 'Admin') : '';
+  const delBtn = document.getElementById('delete-prod-btn');
+  if(delBtn) delBtn.style.display = (currentUser && currentUser.type==='admin') ? '' : 'none';
+}
+let delaySaveTimer = null;
+function stepProdDelay(delta){
+  const p = state.products.find(x=>x.id===ctx.productId);
+  if(!p) return;
+  p.delayDays = Math.max(1, p.delayDays + delta);
+  renderProductDetail();
+  // Enregistrement groupe : on attend que l'employe ait fini d'appuyer.
+  if(delaySaveTimer) clearTimeout(delaySaveTimer);
+  delaySaveTimer = setTimeout(()=>{
+    api('/products/' + p.id, { method:'PUT', body: JSON.stringify({ delayDays: p.delayDays }) })
+      .catch(err=>uiAlert(err.message));
+  }, 600);
+}
+async function printLabel(){
+  const p = state.products.find(x=>x.id===ctx.productId);
+  if(!p) return;
+  const employeeName = currentUser ? (currentUser.name || 'Admin') : '';
+  let r;
+  try{
+    // C'est le serveur qui calcule la date du jour et la DLC :
+    // toutes les tablettes partagent ainsi la meme reference.
+    r = await api('/products/' + p.id + '/print', {
+      method:'POST', body: JSON.stringify({ employee: employeeName })
+    });
+  }catch(e){ await uiAlert(e.message); return; }
+
+  document.getElementById('print-name').textContent = r.productName;
+  document.getElementById('print-line').textContent = `Imprimé ${isoToFr(r.printDate)} · ${r.fridgeName || '-'}`;
+  document.getElementById('print-dlc').textContent = `À consommer avant le ${isoToFr(r.dlcDate)}`;
+  document.getElementById('print-emp').textContent = employeeName;
+  window.print();
+
+  await loadState();
+  go('printed');
+}
+async function deleteProduct(){
+  const p = state.products.find(x=>x.id===ctx.productId);
+  if(!p) return;
+  if(!await uiConfirm(p.name, 'Supprimer ce produit ?', {okText:'Supprimer', danger:true})) return;
+  try{
+    await api('/products/' + p.id, { method:'DELETE' });
+    await loadState();
+    goBack();
+  }catch(e){ await uiAlert(e.message); }
+}
+
+/* ---------------- Fridge picker ---------------- */
+function openFridgePicker(mode){
+  ctx.fridgePickerFor = mode;
+  const grid = document.getElementById('fridge-grid');
+  const currentFridgeId = mode==='existing'
+    ? (state.products.find(x=>x.id===ctx.productId)||{}).fridgeId
+    : document.getElementById('new-prod-fridge-label').dataset.fridgeId;
+  document.getElementById('fridgepicker-sub').textContent = mode==='existing'
+    ? (state.products.find(x=>x.id===ctx.productId)||{}).name
+    : 'Nouveau produit';
+  grid.innerHTML = state.fridges.map(f=>`
+    <div class="fridge-sq ${f.id===currentFridgeId?'selected':''}" data-fridge-id="${f.id}" onclick="selectFridge('${f.id}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="1"/><line x1="5" y1="10" x2="19" y2="10"/></svg>
+      ${f.name}
+    </div>`).join('') + `<div class="fridge-sq add" onclick="addFridgeInline(event)">+ Frigo</div>`;
+  go('fridge-picker');
+}
+async function selectFridge(fridgeId){
+  if(ctx.fridgePickerFor==='existing'){
+    const p = state.products.find(x=>x.id===ctx.productId);
+    if(p){
+      p.fridgeId = fridgeId;
+      try{
+        await api('/products/' + p.id, { method:'PUT', body: JSON.stringify({ fridgeId }) });
+      }catch(e){ await uiAlert(e.message); }
+    }
+  } else {
+    document.getElementById('new-prod-fridge-label').textContent = fridgeName(fridgeId);
+    document.getElementById('new-prod-fridge-label').dataset.fridgeId = fridgeId;
+  }
+  setTimeout(goBack, 150);
+}
+async function addFridgeInline(e){
+  e.stopPropagation();
+  const name = await uiPrompt('Nom du frigo', 'Frigo ' + (state.fridges.length+1), 'Nouveau frigo');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/fridges', { method:'POST', body: JSON.stringify({ name: name.trim() }) });
+    await loadState();
+    openFridgePicker(ctx.fridgePickerFor);
+  }catch(e2){ await uiAlert(e2.message); }
+}
+
+/* ---------------- Settings ---------------- */
+async function submitPasswordChange(){
+  const cur = document.getElementById('pwd-current').value.trim();
+  const next = document.getElementById('pwd-new').value.trim();
+  const confirmVal = document.getElementById('pwd-confirm').value.trim();
+  const errEl = document.getElementById('pwd-err');
+  errEl.textContent = '';
+  if(!/^\d{4}$/.test(next)){ errEl.textContent = 'Le nouveau code doit être composé de 4 chiffres.'; return; }
+  if(next !== confirmVal){ errEl.textContent = 'Les deux codes ne correspondent pas.'; return; }
+  try{
+    await api('/admin-password', { method:'POST', body: JSON.stringify({ current: cur, next }) });
+  }catch(e){ errEl.textContent = e.message; return; }
+  document.getElementById('pwd-current').value = '';
+  document.getElementById('pwd-new').value = '';
+  document.getElementById('pwd-confirm').value = '';
+  await uiAlert('Code d\'accès mis à jour.');
+  goBack();
+}
+
+/* ---------------- Fridges tab ---------------- */
+function renderFridges(){
+  const body = document.getElementById('fridges-body');
+  body.innerHTML = state.fridges.map(f=>{
+    const prods = state.products.filter(p=>p.fridgeId===f.id);
+    const list = prods.length
+      ? prods.map(p=>`<span class="${isExpired(p)?'expired':''}">${p.name}${isExpired(p)?' (DLC dépassée)':''}</span>`).join(', ')
+      : 'Aucun produit rangé ici';
+    return `<div class="fridge-list-row"><div class="fname">${f.name}</div><div class="fprods">${list}</div></div>`;
+  }).join('');
+}
+
+/* ---------------- Manage screen (dashboard central) ---------------- */
+let manageTab = 'cats';
+document.getElementById('manage-subtabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  manageTab = btn.dataset.tab;
+  document.querySelectorAll('#manage-subtabs button').forEach(b=>b.classList.toggle('active', b===btn));
+  renderManage();
+});
+function renderManage(){
+  const body = document.getElementById('manage-body');
+  if(manageTab==='cats') return renderManageCats(body);
+  if(manageTab==='prods') return renderManageProds(body);
+  if(manageTab==='fridges') return renderManageFridges(body);
+  if(manageTab==='users') return renderManageUsers(body);
+  if(manageTab==='log') return renderManageLog(body);
+}
+let logFilter = 'all';
+function setLogFilter(f){ logFilter = f; renderManage(); }
+async function renderManageLog(body){
+  body.innerHTML = '<div class="empty-hint">Chargement…</div>';
+  let log = [];
+  try{
+    const raw = await api('/log');
+    log = raw.map(e=>({
+      type: e.type,
+      at: e.at,
+      productName: e.product_name,
+      fridge: e.fridge_name || '-',
+      by: e.employee || '-',
+      dlcDate: e.dlc_date ? String(e.dlc_date).slice(0,10) : null,
+      expiredDlc: e.expired_dlc ? String(e.expired_dlc).slice(0,10) : null
+    }));
+  }catch(e){ body.innerHTML = '<div class="empty-hint">Historique indisponible.</div>'; return; }
+  const filtered = logFilter==='all' ? log : log.filter(e=>e.type===logFilter);
+  const filters = `<div class="log-filters">
+    <button class="${logFilter==='all'?'active':''}" onclick="setLogFilter('all')">Tout</button>
+    <button class="${logFilter==='print'?'active':''}" onclick="setLogFilter('print')">Impressions</button>
+    <button class="${logFilter==='treated'?'active':''}" onclick="setLogFilter('treated')">DLC traitées</button>
+  </div>`;
+  const rows = filtered.map(e=>{
+    const isPrint = e.type==='print';
+    const meta = isPrint
+      ? `${e.by} · ${e.fridge} · DLC ${e.dlcDate ? isoToFr(e.dlcDate) : '—'}`
+      : `${e.by} · ${e.fridge} · DLC dépassée${e.expiredDlc ? ' du ' + isoToFr(e.expiredDlc) : ''}`;
+    return `<div class="log-row">
+      <div class="lico ${isPrint?'print':'treated'}">${isPrint?'🖨':'✓'}</div>
+      <div class="linfo">
+        <div class="lname">${e.productName}</div>
+        <div class="lmeta">${isPrint?'Étiquette imprimée':'Produit traité'} — ${meta}</div>
+      </div>
+      <div class="lmeta" style="flex-shrink:0;">${formatLogTime(e.at)}</div>
+    </div>`;
+  }).join('') || `<div class="empty-hint">Aucun événement enregistré.</div>`;
+  const clearBtn = log.length ? `<div class="btn-danger-text" onclick="clearLog()">Effacer l'historique</div>` : '';
+  body.innerHTML = filters + rows + clearBtn;
+}
+async function clearLog(){
+  if(!await uiConfirm('Tous les événements enregistrés seront supprimés.', 'Effacer l\'historique ?', {okText:'Effacer', danger:true})) return;
+  try{
+    await api('/log', { method:'DELETE' });
+    renderManage();
+  }catch(e){ await uiAlert(e.message); }
+}
+function renderManageUsers(body){
+  let rows = state.employees.map(e=>`
+    <div class="manage-row">
+      <div class="info"><div class="mname">${e.name}</div><div class="msub">code : ${'•'.repeat(e.code.length)}</div></div>
+      <div class="mactions">
+        <button onclick="manageEditEmployee('${e.id}')">Modifier</button>
+        <button class="danger" onclick="manageDeleteEmployee('${e.id}')">Supprimer</button>
+      </div>
+    </div>`).join('') || `<div class="empty-hint">Aucun utilisateur pour l'instant.</div>`;
+  body.innerHTML = rows + `<button class="btn-primary manage-add-btn" style="margin-left:0;margin-right:0;" onclick="manageAddEmployee()">+ Ajouter un utilisateur</button>`;
+}
+async function manageAddEmployee(){
+  const name = await uiPrompt('Prénom', '', 'Nouvel utilisateur');
+  if(!name || !name.trim()) return;
+  const code = await uiPrompt('Code personnel à 4 chiffres', '', 'Code de ' + name.trim(), {numeric:true});
+  if(!code || !/^\d{4}$/.test(code.trim())){ await uiAlert('Le code doit être composé de 4 chiffres.'); return; }
+  try{
+    await api('/employees', { method:'POST', body: JSON.stringify({ name: name.trim(), code: code.trim() }) });
+    await syncState();
+    renderEmployeeGrid();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageEditEmployee(empId){
+  const emp = state.employees.find(e=>e.id===empId);
+  if(!emp) return;
+  const name = await uiPrompt('Prénom', emp.name, 'Modifier l\'utilisateur');
+  if(!name || !name.trim()) return;
+  const code = await uiPrompt('Code personnel à 4 chiffres', emp.code, 'Code de ' + name.trim(), {numeric:true});
+  if(!code || !/^\d{4}$/.test(code.trim())){ await uiAlert('Le code doit être composé de 4 chiffres.'); return; }
+  try{
+    await api('/employees/' + empId, { method:'PUT', body: JSON.stringify({ name: name.trim(), code: code.trim() }) });
+    await syncState();
+    renderEmployeeGrid();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageDeleteEmployee(empId){
+  const emp = state.employees.find(e=>e.id===empId);
+  if(!emp) return;
+  if(!await uiConfirm(emp.name, 'Supprimer cet utilisateur ?', {okText:'Supprimer', danger:true})) return;
+  try{
+    await api('/employees/' + empId, { method:'DELETE' });
+    await syncState();
+    renderEmployeeGrid();
+  }catch(e){ await uiAlert(e.message); }
+}
+
+function renderManageCats(body){
+  let rows = state.categories.map(c=>{
+    const n = categoryProducts(c.id).length;
+    return `<div class="manage-row">
+      <div class="info"><div class="mname">${c.name}</div><div class="msub">${n} produit${n>1?'s':''}</div></div>
+      <div class="mactions">
+        <button onclick="renameCategory('${c.id}')">Renommer</button>
+        <button class="danger" onclick="deleteCategory('${c.id}')">Supprimer</button>
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty-hint">Aucune catégorie.</div>`;
+  body.innerHTML = rows + `<button class="btn-primary manage-add-btn" style="margin-left:0;margin-right:0;" onclick="manageAddCategory()">+ Ajouter une catégorie</button>`;
+}
+async function manageAddCategory(){
+  const name = await uiPrompt('Nom de la catégorie', '', 'Nouvelle catégorie');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/categories', { method:'POST', body: JSON.stringify({ name: name.trim() }) });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+
+function renderManageProds(body){
+  let rows = state.products.map(p=>{
+    const cat = state.categories.find(c=>c.id===p.categoryId);
+    return `<div class="manage-row">
+      <div class="info"><div class="mname">${p.name}</div><div class="msub">${cat?cat.name:'—'} · ${fridgeName(p.fridgeId)} · +${p.delayDays} j</div></div>
+      <div class="mactions">
+        <button onclick="ctx.categoryId='${p.categoryId}';ctx.productId='${p.id}';historyStack=['manage'];show('product');renderProductDetail();">Ouvrir</button>
+        <button class="danger" onclick="manageDeleteProduct('${p.id}')">Supprimer</button>
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty-hint">Aucun produit.</div>`;
+  body.innerHTML = rows + `<button class="btn-primary manage-add-btn" style="margin-left:0;margin-right:0;" onclick="manageAddProduct()">+ Ajouter un produit</button>`;
+}
+async function manageDeleteProduct(prodId){
+  const p = state.products.find(x=>x.id===prodId);
+  if(!p) return;
+  if(!await uiConfirm(p.name, 'Supprimer ce produit ?', {okText:'Supprimer', danger:true})) return;
+  try{
+    await api('/products/' + prodId, { method:'DELETE' });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageAddProduct(){
+  if(!state.categories.length){ await uiAlert('Créez d\'abord une catégorie.'); return; }
+  if(!state.fridges.length){ await uiAlert('Créez d\'abord un frigo.'); return; }
+  const name = await uiPrompt('Nom du produit', '', 'Nouveau produit');
+  if(!name || !name.trim()) return;
+  const catIdx = await uiChoose('Catégorie', state.categories.map(c=>c.name), name.trim());
+  if(catIdx===null || !state.categories[catIdx]) return;
+  const fridgeIdx = await uiChoose('Frigo', state.fridges.map(f=>f.name), name.trim());
+  if(fridgeIdx===null || !state.fridges[fridgeIdx]) return;
+  const delayStr = await uiPrompt('Délai avant DLC, en jours', '3', name.trim(), {numeric:true});
+  if(delayStr===null) return;
+  const delay = Math.max(1, parseInt(delayStr,10) || 3);
+  try{
+    await api('/products', { method:'POST', body: JSON.stringify({
+      name: name.trim(),
+      categoryId: state.categories[catIdx].id,
+      fridgeId: state.fridges[fridgeIdx].id,
+      delayDays: delay
+    })});
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+
+function renderManageFridges(body){
+  let rows = state.fridges.map(f=>{
+    const n = state.products.filter(p=>p.fridgeId===f.id).length;
+    return `<div class="manage-row">
+      <div class="info"><div class="mname">${f.name}</div><div class="msub">${n} produit${n>1?'s':''} rangé${n>1?'s':''}</div></div>
+      <div class="mactions">
+        <button onclick="manageRenameFridge('${f.id}')">Renommer</button>
+        <button class="danger" onclick="manageDeleteFridge('${f.id}')">Supprimer</button>
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty-hint">Aucun frigo.</div>`;
+  body.innerHTML = rows + `<button class="btn-primary manage-add-btn" style="margin-left:0;margin-right:0;" onclick="manageAddFridge()">+ Ajouter un frigo</button>`;
+}
+async function manageAddFridge(){
+  const name = await uiPrompt('Nom du frigo', 'Frigo ' + (state.fridges.length+1), 'Nouveau frigo');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/fridges', { method:'POST', body: JSON.stringify({ name: name.trim() }) });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageRenameFridge(fridgeId){
+  const f = state.fridges.find(x=>x.id===fridgeId);
+  if(!f) return;
+  const name = await uiPrompt('Nom du frigo', f.name, 'Renommer');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/fridges/' + fridgeId, { method:'PUT', body: JSON.stringify({ name: name.trim() }) });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageDeleteFridge(fridgeId){
+  const f = state.fridges.find(x=>x.id===fridgeId);
+  if(!f) return;
+  const n = state.products.filter(p=>p.fridgeId===fridgeId).length;
+  if(n > 0){ await uiAlert(`${n} produit${n>1?'s sont':' est'} encore rangé${n>1?'s':''} dans ce frigo. Changez leur frigo d'abord.`, 'Suppression impossible'); return; }
+  if(!await uiConfirm(f.name, 'Supprimer ce frigo ?', {okText:'Supprimer', danger:true})) return;
+  try{
+    await api('/fridges/' + fridgeId, { method:'DELETE' });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+
+/* ---------------- Login ---------------- */
+let currentUser = null; // { type:'admin' } or { type:'employee', id, name }
+let pendingLogin = null; // { type:'employee', employee } or { type:'admin' }
+
+function renderEmployeeGrid(){
+  const grid = document.getElementById('employee-grid');
+  grid.innerHTML = state.employees.map(e=>`
+    <div class="fridge-sq" onclick="selectEmployeeLogin('${e.id}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg>
+      ${e.name}
+    </div>`).join('');
+  if(!state.employees.length){
+    grid.innerHTML = `<div class="empty-hint" style="grid-column:1/-1;">Aucun utilisateur pour l'instant.<br>Contactez l'administrateur.</div>`;
+  }
+}
+function selectEmployeeLogin(empId){
+  const emp = state.employees.find(e=>e.id===empId);
+  if(!emp) return;
+  pendingLogin = { type:'employee', employee: emp };
+  document.getElementById('pin-title').textContent = emp.name;
+  document.getElementById('pin-hint').textContent = 'Entrer ton code personnel';
+  pin=''; updatePinDots();
+  go('login-pin');
+}
+function startAdminLogin(){
+  pendingLogin = { type:'admin' };
+  document.getElementById('pin-title').textContent = 'Administrateur';
+  document.getElementById('pin-hint').textContent = 'Entrer le code administrateur';
+  pin=''; updatePinDots();
+  go('login-pin');
+}
+function applyRolePermissions(){
+  const isAdmin = currentUser && currentUser.type==='admin';
+  document.getElementById('navbar').style.display = 'flex';
+  // Admin : tout se fait depuis Gestion. Employé : uniquement Catégories.
+  document.querySelectorAll('#navbar button[data-screen="manage"]').forEach(b=> b.style.display = isAdmin ? '' : 'none');
+  document.querySelectorAll('#navbar button[data-screen="fridges"]').forEach(b=> b.style.display = isAdmin ? 'none' : 'none');
+  document.querySelectorAll('#navbar button[data-screen="dashboard"]').forEach(b=> b.style.display = isAdmin ? 'none' : '');
+  const settingsBtn = document.getElementById('settings-btn');
+  if(settingsBtn) settingsBtn.style.display = isAdmin ? '' : 'none';
+}
+function logout(){
+  currentUser = null;
+  historyStack = [];
+  clearAutoLogout();
+  show('login-who');
+  renderEmployeeGrid();
+}
+
+function updatePinDots(){
+  for(let i=1;i<=4;i++) document.getElementById('d'+i).classList.toggle('filled', pin.length>=i);
+}
+document.getElementById('keypad').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  document.getElementById('login-err').textContent='';
+  document.getElementById('pin-dots').classList.remove('error');
+  if(btn.id === 'clear'){ pin=''; }
+  else if(btn.id === 'back'){ pin = pin.slice(0,-1); }
+  else if(btn.dataset.n !== undefined && pin.length < 4){ pin += btn.dataset.n; }
+  updatePinDots();
+  if(pin.length===4){
+    setTimeout(async ()=>{
+      const attempt = pin;
+      let result = null;
+      try{
+        // Les codes sont verifies par le serveur, jamais dans le navigateur.
+        result = await api('/login', { method:'POST', body: JSON.stringify(
+          pendingLogin && pendingLogin.type==='admin'
+            ? { type:'admin', code: attempt }
+            : { type:'employee', employeeId: pendingLogin.employee.id, code: attempt }
+        )});
+      }catch(e){ result = null; }
+
+      if(result && result.ok){
+        currentUser = result.user;
+        pin=''; pendingLogin=null;
+        historyStack = [];
+        applyRolePermissions();
+        await loadState();
+        if(currentUser.type==='admin'){
+          show('manage');
+          renderManage();
+        } else {
+          show('dashboard');
+          renderDashboard();
+        }
+      } else {
+        document.getElementById('login-err').textContent = 'Code incorrect';
+        document.getElementById('pin-dots').classList.add('error');
+        pin='';
+        updatePinDots();
+      }
+    }, 150);
+  }
+});
+
+/* ---------------- Navbar ---------------- */
+document.getElementById('navbar').style.display='none';
+document.querySelectorAll('#navbar button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    historyStack = [];
+    show(b.dataset.screen);
+    if(b.dataset.screen==='dashboard') renderDashboard();
+    if(b.dataset.screen==='fridges') renderFridges();
+    if(b.dataset.screen==='manage') renderManage();
+  });
+});
+
+/* ---------------- Boot ---------------- */
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+function triggerInstall(){
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.finally(()=>{ deferredInstallPrompt = null; });
+  } else {
+    document.getElementById('install-hint').style.color = 'var(--ink)';
+    document.getElementById('install-hint').textContent = 'Ouvrez le menu ⋮ (Chrome) ou le menu de partage (Safari), puis choisissez "Ajouter à l\'écran d\'accueil" / "Installer l\'application".';
+  }
+}
+(async function init(){
+  try{
+    await loadState();
+  }catch(e){
+    document.getElementById('employee-grid').innerHTML =
+      '<div class="empty-hint" style="grid-column:1/-1;">Connexion au serveur impossible.<br>Vérifiez le réseau puis rechargez.</div>';
+    return;
+  }
+  show('login-who');
+  renderEmployeeGrid();
+
+  // Synchronisation entre tablettes : on relit le serveur regulierement
+  // pour que les alertes et les donnees restent identiques partout.
+  setInterval(async ()=>{
+    try{
+      await loadState();
+      if(current === 'login-who') renderEmployeeGrid();
+      refreshCurrentScreen();
+    }catch(e){ /* reseau momentanement indisponible */ }
+  }, 20000);
+})();
+</script>
+
+</body>
+</html>
