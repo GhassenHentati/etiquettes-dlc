@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: etiquettes-dlc
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: etiquettes-dlc-db
+          property: connectionString
+
+databases:
+  - name: etiquettes-dlc-db
+    plan: free
