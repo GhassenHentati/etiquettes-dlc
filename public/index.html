@@ -181,16 +181,16 @@
   .log-filters button{ flex:1; padding:7px 0; border:1px solid var(--line); background:var(--surface); border-radius:5px; font-size:11px; color:var(--muted); cursor:pointer; font-family:inherit; }
   .log-filters button.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
 
-  /* PRINT LABEL (thermal receipt style) */
+  /* PRINT LABEL (thermal receipt style, fallback for when Bluetooth printing is unavailable) */
   #print-area{ display:none; }
   @media print{
     body *{ visibility:hidden; }
     #print-area, #print-area *{ visibility:visible; }
-    #print-area{ display:block; position:fixed; top:0; left:0; width:50mm; padding:2mm; }
-    #print-area .p-name{ font-size:14pt; font-weight:700; text-transform:uppercase; }
-    #print-area .p-line{ font-size:9pt; margin-top:2mm; }
-    #print-area .p-dlc{ font-size:11pt; font-weight:700; margin-top:1mm; }
-    #print-area .p-emp{ font-size:8pt; text-align:right; margin-top:3mm; color:#333; }
+    #print-area{ display:block; position:fixed; top:0; left:0; width:40mm; padding:1.5mm; }
+    #print-area .p-name{ font-size:12pt; font-weight:700; text-transform:uppercase; }
+    #print-area .p-line{ font-size:8pt; margin-top:1.5mm; }
+    #print-area .p-dlc{ font-size:10pt; font-weight:700; margin-top:1mm; }
+    #print-area .p-emp{ font-size:7pt; text-align:right; margin-top:2mm; color:#333; }
   }
   .sticker .p-emp{ text-align:right; font-size:10px; color:var(--muted); margin-top:6px; font-family:"IBM Plex Sans",sans-serif; }
 </style>
@@ -207,7 +207,7 @@
   <div class="screen active" id="login-who">
     <div class="lockbox">
       <h1>Étiquettes DLC</h1>
-      <p style="color:var(--muted);font-size:10px;margin:6px 0 22px 0;">build 2026-09-17 · serveur v1</p>
+      <p style="color:var(--muted);font-size:10px;margin:6px 0 22px 0;">build 2026-09-18 · serveur v2</p>
       <div class="fridge-grid" id="employee-grid" style="max-width:290px;margin:0 auto;"></div>
       <div class="btn-danger-text" style="color:var(--muted);margin-top:20px;" onclick="startAdminLogin()">Accès administrateur</div>
 
@@ -359,12 +359,17 @@
       <button class="btn-primary" onclick="submitPasswordChange()">Changer le code d'accès</button>
 
       <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line);">
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;">Sur l'écran d'accueil</label>
-        <button class="btn-dark" id="install-btn" onclick="triggerInstall()">Ajouter l'icône à l'écran d'accueil</button>
-        <p id="install-hint" style="color:var(--muted);font-size:12px;margin-top:10px;">Si rien ne se passe : ouvrez le menu ⋮ du navigateur puis choisissez "Ajouter à l'écran d'accueil" ou "Installer l'application".</p>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;">Imprimante d'étiquettes (Niimbot, Bluetooth)</label>
+        <p style="font-size:13px;margin:0 0 10px 0;">État : <span id="ble-status" style="color:var(--muted);font-weight:600;">Non connectée</span></p>
+        <button class="btn-dark" style="margin-top:0;" onclick="pairPrinter()">Appairer l'imprimante</button>
+        <div class="btn-danger-text" id="ble-disconnect-btn" style="display:none;margin-top:12px;" onclick="disconnectPrinter()">Déconnecter l'imprimante</div>
+        <p style="color:var(--muted);font-size:12px;margin-top:10px;">Nécessite Chrome (Android ou ordinateur). Une fois appairée sur cette tablette, l'imprimante reste disponible pour tous les employés. Si l'impression Bluetooth échoue, l'app bascule automatiquement sur l'impression navigateur.</p>
       </div>
 
       <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line);">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;">Sur l'écran d'accueil</label>
+        <button class="btn-dark" id="install-btn" onclick="triggerInstall()">Ajouter l'icône à l'écran d'accueil</button>
+        <p id="install-hint" style="color:var(--muted);font-size:12px;margin-top:10px;">Si rien ne se passe : ouvrez le menu ⋮ du navigateur puis choisissez "Ajouter à l'écran d'accueil" ou "Installer l'application".</p>
       </div>
     </div>
   </div>
@@ -406,6 +411,7 @@
   <div class="p-emp" id="print-emp"></div>
 </div>
 
+<script src="vendor/niimbluelib.browser.min.js"></script>
 <script>
 /* ---------------- State & API ---------------- */
 let state = null;
@@ -487,6 +493,7 @@ function show(id){
   document.querySelectorAll('#navbar button').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
   current = id;
   renderGlobalAlert();
+  if(id==='settings') renderBlePrinterStatus();
   if(id==='login-who' || id==='login-pin'){
     clearAutoLogout();
   } else if(id==='printed'){
@@ -519,6 +526,164 @@ function isExpired(p){
   return todayISO() > p.lastPrinted.dlcDate;
 }
 function allExpiredProducts(){ return state.products.filter(isExpired); }
+
+/* ---------------- Bluetooth printer (Niimbot B1) ---------------- */
+// Roll shipped with the printer: 40x20mm labels, printer is 203dpi.
+const NIIMBOT_MODEL = 'B1';
+const LABEL_WIDTH_MM = 40;
+const LABEL_HEIGHT_MM = 20;
+const LABEL_DPI = 203;
+const LABEL_COLS = Math.round(LABEL_WIDTH_MM * LABEL_DPI / 25.4);
+const LABEL_ROWS = Math.round(LABEL_HEIGHT_MM * LABEL_DPI / 25.4);
+const BLE_DEVICE_KEY = 'dlc-ble-device-id';
+
+let bleClient = null;
+let bleConnected = false;
+let bleDeviceName = '';
+
+function bleAvailable(){ return !!(navigator.bluetooth && window.Niimblue); }
+
+function getBleClient(){
+  if(!bleClient && window.Niimblue){
+    bleClient = new Niimblue.NiimbotBluetoothClient();
+    bleClient.on('disconnect', ()=>{
+      bleConnected = false;
+      bleDeviceName = '';
+      renderBlePrinterStatus();
+    });
+  }
+  return bleClient;
+}
+
+async function pairPrinter(){
+  if(!bleAvailable()){
+    await uiAlert("Le Bluetooth n'est pas disponible sur cet appareil/navigateur. Utilisez Chrome sur Android ou sur ordinateur.", 'Bluetooth indisponible');
+    return;
+  }
+  try{
+    const options = {
+      filters: [
+        ...Niimblue.BleDefaultConfiguration.NAME_FILTERS,
+        { services: Niimblue.BleDefaultConfiguration.SERVICES }
+      ]
+    };
+    const device = await navigator.bluetooth.requestDevice(options);
+    const client = getBleClient();
+    await client.connect({ authorizedDevice: device });
+    try{ localStorage.setItem(BLE_DEVICE_KEY, device.id); }catch(e){}
+    bleConnected = true;
+    bleDeviceName = device.name || 'Niimbot';
+    renderBlePrinterStatus();
+    await uiAlert(`Connectée à ${bleDeviceName}.`, 'Imprimante appairée');
+  }catch(e){
+    if(e && e.name === 'NotFoundError') return; // choix annulé par l'utilisateur
+    console.error(e);
+    await uiAlert("Impossible de se connecter à l'imprimante : " + (e.message || e), "Échec de l'appairage");
+  }
+}
+
+async function tryAutoReconnect(){
+  if(!bleAvailable() || !navigator.bluetooth.getDevices) return false;
+  let savedId;
+  try{ savedId = localStorage.getItem(BLE_DEVICE_KEY); }catch(e){ savedId = null; }
+  if(!savedId) return false;
+  const client = getBleClient();
+  if(client.isConnected()) return true;
+  try{
+    const devices = await navigator.bluetooth.getDevices();
+    const device = devices.find(d=>d.id===savedId);
+    if(!device) return false;
+    await client.connect({ authorizedDevice: device });
+    bleConnected = true;
+    bleDeviceName = device.name || 'Niimbot';
+    renderBlePrinterStatus();
+    return true;
+  }catch(e){
+    console.warn('Reconnexion Bluetooth impossible :', e);
+    return false;
+  }
+}
+
+function disconnectPrinter(){
+  if(bleClient){ bleClient.disconnect(); }
+  bleConnected = false;
+  bleDeviceName = '';
+  renderBlePrinterStatus();
+}
+
+function renderBlePrinterStatus(){
+  const el = document.getElementById('ble-status');
+  if(!el) return;
+  el.textContent = bleConnected ? `Connectée : ${bleDeviceName}` : 'Non connectée';
+  el.style.color = bleConnected ? 'var(--fresh)' : 'var(--muted)';
+  const disBtn = document.getElementById('ble-disconnect-btn');
+  if(disBtn) disBtn.style.display = bleConnected ? '' : 'none';
+}
+
+function buildLabelCanvas(productName, fridgeNameStr, printDateISO, dlcISO, employeeName){
+  const canvas = document.createElement('canvas');
+  canvas.width = LABEL_COLS;
+  canvas.height = LABEL_ROWS;
+  const c2d = canvas.getContext('2d');
+  c2d.fillStyle = '#ffffff';
+  c2d.fillRect(0, 0, canvas.width, canvas.height);
+  c2d.fillStyle = '#000000';
+  c2d.textBaseline = 'top';
+
+  const padX = 10;
+  let y = 8;
+
+  // Nom du produit, en gros, réduit automatiquement pour tenir sur une ligne.
+  let fontSize = 30;
+  const name = (productName || '').toUpperCase();
+  c2d.font = `700 ${fontSize}px Arial, sans-serif`;
+  while(fontSize > 14 && c2d.measureText(name).width > canvas.width - padX * 2){
+    fontSize -= 2;
+    c2d.font = `700 ${fontSize}px Arial, sans-serif`;
+  }
+  c2d.fillText(name, padX, y);
+  y += fontSize + 8;
+
+  // Frigo + date d'impression
+  c2d.font = '400 13px Arial, sans-serif';
+  c2d.fillText(`${fridgeNameStr || '-'} · Imprimé ${isoToFr(printDateISO)}`, padX, y);
+  y += 20;
+
+  // DLC
+  c2d.font = '700 17px Arial, sans-serif';
+  c2d.fillText(`DLC : ${isoToFr(dlcISO)}`, padX, y);
+
+  // Employé, en bas à droite
+  c2d.font = '400 12px Arial, sans-serif';
+  const empText = employeeName || '';
+  const empWidth = c2d.measureText(empText).width;
+  c2d.fillText(empText, canvas.width - padX - empWidth, canvas.height - 18);
+
+  return canvas;
+}
+
+async function printLabelBluetooth(productName, fridgeNameStr, printDateISO, dlcISO, employeeName){
+  if(!bleAvailable()) return false;
+  const client = getBleClient();
+  if(!client.isConnected()){
+    const reconnected = await tryAutoReconnect();
+    if(!reconnected) return false;
+  }
+  const canvas = buildLabelCanvas(productName, fridgeNameStr, printDateISO, dlcISO, employeeName);
+  const meta = client.getModelMetadata();
+  const density = (meta && meta.densityDefault) || 3;
+  const encoded = Niimblue.ImageEncoder.encodeCanvas(canvas, Niimblue.PageColorType.SingleColor, 'top');
+  const task = client.protocol.newPrintTask(NIIMBOT_MODEL, { totalPages: 1, density, labelType: Niimblue.LabelType.WithGaps });
+  try{
+    await task.printInit();
+    await task.printPage(encoded, 1);
+    await task.waitForPageFinished();
+    await task.waitForFinished();
+    return true;
+  } finally {
+    try{ await client.protocol.printEnd(); }catch(e){}
+  }
+}
 
 /* ---------------- Auto-logout ---------------- */
 const IDLE_MS = 60000;        // 1 minute sans activité
@@ -874,11 +1039,20 @@ async function printLabel(){
     });
   }catch(e){ await uiAlert(e.message); return; }
 
-  document.getElementById('print-name').textContent = r.productName;
-  document.getElementById('print-line').textContent = `Imprimé ${isoToFr(r.printDate)} · ${r.fridgeName || '-'}`;
-  document.getElementById('print-dlc').textContent = `À consommer avant le ${isoToFr(r.dlcDate)}`;
-  document.getElementById('print-emp').textContent = employeeName;
-  window.print();
+  let printedViaBluetooth = false;
+  try{
+    printedViaBluetooth = await printLabelBluetooth(r.productName, r.fridgeName, r.printDate, r.dlcDate, employeeName);
+  }catch(e){
+    console.warn("Impression Bluetooth impossible, bascule sur l'impression navigateur :", e);
+  }
+
+  if(!printedViaBluetooth){
+    document.getElementById('print-name').textContent = r.productName;
+    document.getElementById('print-line').textContent = `Imprimé ${isoToFr(r.printDate)} · ${r.fridgeName || '-'}`;
+    document.getElementById('print-dlc').textContent = `À consommer avant le ${isoToFr(r.dlcDate)}`;
+    document.getElementById('print-emp').textContent = employeeName;
+    window.print();
+  }
 
   await loadState();
   go('printed');
@@ -1322,6 +1496,7 @@ function triggerInstall(){
   }
   show('login-who');
   renderEmployeeGrid();
+  tryAutoReconnect(); // reconnexion silencieuse à l'imprimante déjà appairée, sans bloquer le démarrage
 
   // Synchronisation entre tablettes : on relit le serveur regulierement
   // pour que les alertes et les donnees restent identiques partout.
