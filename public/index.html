@@ -632,6 +632,7 @@ function buildLabelCanvas(productName, fridgeNameStr, printDateISO, dlcISO, empl
 
   const padX = 10;
   const padRight = 16; // marge de sécurité : un texte collé au bord droit ressortait rogné à l'impression
+  const empPadRight = 40; // "Sam" décalé plus franchement vers l'intérieur
   let y = 18;
 
   // Nom du produit, en gros, réduit automatiquement pour tenir sur une ligne.
@@ -643,22 +644,22 @@ function buildLabelCanvas(productName, fridgeNameStr, printDateISO, dlcISO, empl
     c2d.font = `700 ${fontSize}px Arial, sans-serif`;
   }
   c2d.fillText(name, padX, y);
-  y += fontSize + 10;
+  y += fontSize + 16;
 
-  // Frigo + date d'impression, agrandis
-  c2d.font = '700 15px Arial, sans-serif';
+  // Frigo + date d'impression : pas en gras, police plus grande
+  c2d.font = '400 18px Arial, sans-serif';
   c2d.fillText(`${fridgeNameStr || '-'} · Imprimé ${isoToFr(printDateISO)}`, padX, y);
-  y += 24;
+  y += 30;
 
-  // DLC, agrandie
-  c2d.font = '700 21px Arial, sans-serif';
+  // DLC : pas en gras, police plus grande
+  c2d.font = '400 24px Arial, sans-serif';
   c2d.fillText(`DLC : ${isoToFr(dlcISO)}`, padX, y);
 
-  // Employé, repositionné avec une marge à droite pour ne plus être rogné
+  // Employé, décalé vers la gauche pour rester loin du bord droit
   c2d.font = '400 13px Arial, sans-serif';
   const empText = employeeName || '';
   const empWidth = c2d.measureText(empText).width;
-  c2d.fillText(empText, canvas.width - padRight - empWidth, canvas.height - 20);
+  c2d.fillText(empText, canvas.width - empPadRight - empWidth, canvas.height - 20);
 
   return canvas;
 }
