@@ -631,33 +631,34 @@ function buildLabelCanvas(productName, fridgeNameStr, printDateISO, dlcISO, empl
   c2d.textBaseline = 'top';
 
   const padX = 10;
-  let y = 8;
+  const padRight = 16; // marge de sécurité : un texte collé au bord droit ressortait rogné à l'impression
+  let y = 18;
 
   // Nom du produit, en gros, réduit automatiquement pour tenir sur une ligne.
-  let fontSize = 30;
+  let fontSize = 28;
   const name = (productName || '').toUpperCase();
   c2d.font = `700 ${fontSize}px Arial, sans-serif`;
-  while(fontSize > 14 && c2d.measureText(name).width > canvas.width - padX * 2){
+  while(fontSize > 14 && c2d.measureText(name).width > canvas.width - padX - padRight){
     fontSize -= 2;
     c2d.font = `700 ${fontSize}px Arial, sans-serif`;
   }
   c2d.fillText(name, padX, y);
-  y += fontSize + 8;
+  y += fontSize + 10;
 
-  // Frigo + date d'impression
-  c2d.font = '400 13px Arial, sans-serif';
+  // Frigo + date d'impression, agrandis
+  c2d.font = '700 15px Arial, sans-serif';
   c2d.fillText(`${fridgeNameStr || '-'} · Imprimé ${isoToFr(printDateISO)}`, padX, y);
-  y += 20;
+  y += 24;
 
-  // DLC
-  c2d.font = '700 17px Arial, sans-serif';
+  // DLC, agrandie
+  c2d.font = '700 21px Arial, sans-serif';
   c2d.fillText(`DLC : ${isoToFr(dlcISO)}`, padX, y);
 
-  // Employé, en bas à droite
-  c2d.font = '400 12px Arial, sans-serif';
+  // Employé, repositionné avec une marge à droite pour ne plus être rogné
+  c2d.font = '400 13px Arial, sans-serif';
   const empText = employeeName || '';
   const empWidth = c2d.measureText(empText).width;
-  c2d.fillText(empText, canvas.width - padX - empWidth, canvas.height - 18);
+  c2d.fillText(empText, canvas.width - padRight - empWidth, canvas.height - 20);
 
   return canvas;
 }
