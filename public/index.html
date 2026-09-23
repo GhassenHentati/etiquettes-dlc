@@ -202,12 +202,24 @@
   <div id="global-alert"></div>
   <div id="modal-layer"><div class="modal-box" id="modal-box"></div></div>
 
+  <!-- DEVICE SETUP (une fois par tablette : restaurant + zone) -->
+  <div class="screen active" id="device-setup">
+    <div class="lockbox">
+      <div class="icon" style="border-color:var(--fresh);color:var(--fresh);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="10" y1="19" x2="14" y2="19"/></svg>
+      </div>
+      <h1>Configuration de la tablette</h1>
+      <p class="hint">Cette tablette n'est pas encore associée à un restaurant.<br>Réservé à l'administrateur.</p>
+      <button class="btn-primary" style="max-width:260px;margin:0 auto;" onclick="startDeviceSetup()">Configurer cette tablette</button>
+    </div>
+  </div>
+
   <!-- LOGIN -->
   <!-- LOGIN -->
-  <div class="screen active" id="login-who">
+  <div class="screen" id="login-who">
     <div class="lockbox">
       <h1>Étiquettes DLC</h1>
-      <p style="color:var(--muted);font-size:10px;margin:6px 0 22px 0;">build 2026-09-18 · serveur v2</p>
+      <p style="color:var(--muted);font-size:10px;margin:6px 0 22px 0;">build 2026-09-23 · multi-restaurants</p>
       <div class="fridge-grid" id="employee-grid" style="max-width:290px;margin:0 auto;"></div>
       <div class="btn-danger-text" style="color:var(--muted);margin-top:20px;" onclick="startAdminLogin()">Accès administrateur</div>
 
@@ -309,6 +321,13 @@
         <label>Date du jour</label>
         <div class="value-row"><span id="today-lbl"></span><span style="color:var(--muted);font-size:12px;">auto</span></div>
       </div>
+      <div class="field" id="prod-restaurants-field" style="display:none;">
+        <label>Autres restaurants</label>
+        <div class="value-row" onclick="editProductRestaurants()" style="cursor:pointer;">
+          <span id="prod-restaurants-label">—</span>
+          <span style="color:var(--muted);font-size:12px;">changer ›</span>
+        </div>
+      </div>
       <button class="btn-dark" onclick="printLabel()">Imprimer l'étiquette</button>
       <div class="label-preview">
         <div class="caption">Aperçu de l'étiquette</div>
@@ -339,7 +358,9 @@
       <button data-tab="cats" class="active">Catégories</button>
       <button data-tab="prods">Produits</button>
       <button data-tab="fridges">Frigos</button>
+      <button data-tab="zones">Zones</button>
       <button data-tab="users">Utilisateurs</button>
+      <button data-tab="restaurants">Restaurants</button>
       <button data-tab="log">Historique</button>
     </div>
     <div class="body-pad" id="manage-body" style="padding-top:14px;"></div>
@@ -357,6 +378,12 @@
       <div class="field"><label>Confirmer le nouveau code</label><input type="text" inputmode="numeric" maxlength="4" id="pwd-confirm" placeholder="ex : 5678"></div>
       <div class="err-msg" id="pwd-err" style="height:auto;margin-bottom:10px;"></div>
       <button class="btn-primary" onclick="submitPasswordChange()">Changer le code d'accès</button>
+
+      <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line);">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;">Restaurant de cette tablette</label>
+        <p style="font-size:13px;margin:0 0 10px 0;" id="device-restaurant-label">—</p>
+        <button class="btn-dark" style="margin-top:0;" onclick="startDeviceSetup()">Changer de restaurant / zone</button>
+      </div>
 
       <div style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line);">
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px;">Imprimante d'étiquettes (Niimbot, Bluetooth)</label>
@@ -420,6 +447,31 @@ let historyStack = [];
 let ctx = { categoryId:null, productId:null, fridgePickerFor:null, newProdCategoryId:null };
 let pin = '';
 
+/* ---------------- Restaurant / zone de cette tablette ---------------- */
+// Chaque tablette est dediee une fois pour toutes a un restaurant + une zone
+// (ex: Cuisine, Salle). Configure par l'admin, memorise sur l'appareil.
+const DEVICE_RESTAURANT_KEY = 'dlc-restaurant-id';
+const DEVICE_ZONE_KEY = 'dlc-zone-id';
+let currentRestaurantId = localStorage.getItem(DEVICE_RESTAURANT_KEY) || null;
+let currentZoneId = localStorage.getItem(DEVICE_ZONE_KEY) || null;
+let allRestaurants = [];
+
+function renderDeviceRestaurantLabel(){
+  const el = document.getElementById('device-restaurant-label');
+  if(!el) return;
+  const r = allRestaurants.find(x=>String(x.id)===currentRestaurantId);
+  const z = state ? state.zones.find(x=>x.id===currentZoneId) : null;
+  el.textContent = (r ? r.name : '—') + (z ? ' · ' + z.name : '');
+}
+function saveDeviceConfig(restaurantId, zoneId){
+  currentRestaurantId = restaurantId ? String(restaurantId) : null;
+  currentZoneId = zoneId ? String(zoneId) : null;
+  try{
+    if(currentRestaurantId) localStorage.setItem(DEVICE_RESTAURANT_KEY, currentRestaurantId);
+    if(currentZoneId) localStorage.setItem(DEVICE_ZONE_KEY, currentZoneId); else localStorage.removeItem(DEVICE_ZONE_KEY);
+  }catch(e){}
+}
+
 function pad2(n){ return n.toString().padStart(2,'0'); }
 function localISO(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 function todayISO(){ return localISO(new Date()); }
@@ -456,7 +508,8 @@ async function api(path, options){
 function normalizeState(raw){
   return {
     employees: raw.employees.map(e=>({ id:String(e.id), name:e.name, code:e.code })),
-    fridges: raw.fridges.map(f=>({ id:String(f.id), name:f.name })),
+    fridges: raw.fridges.map(f=>({ id:String(f.id), name:f.name, zoneId: f.zone_id===null?null:String(f.zone_id) })),
+    zones: (raw.zones||[]).map(z=>({ id:String(z.id), name:z.name })),
     categories: raw.categories.map(c=>({ id:String(c.id), name:c.name })),
     products: raw.products.map(p=>({
       id: String(p.id),
@@ -475,8 +528,25 @@ function normalizeState(raw){
 }
 
 async function loadState(){
-  const raw = await api('/state');
+  const raw = await api('/state?restaurantId=' + encodeURIComponent(currentRestaurantId));
   state = normalizeState(raw);
+}
+
+async function loadAllRestaurants(){
+  allRestaurants = await api('/restaurants');
+}
+// Ouvre la case a cocher "a quel(s) restaurant(s)" ; retourne un tableau de
+// nombres, ou null si annule. preselected: tableau d'id (string ou nombre).
+async function pickRestaurantIds(preselected, title){
+  if(!allRestaurants.length) await loadAllRestaurants();
+  const pre = (preselected||[]).map(String);
+  const picked = await uiMultiChoose(
+    'Cette entree sera visible sur les tablettes des restaurants coches.',
+    allRestaurants.map(r=>({ value:String(r.id), label:r.name })),
+    pre,
+    title || 'Restaurants concernes'
+  );
+  return picked === null ? null : picked.map(Number);
 }
 
 // Recharge depuis le serveur puis rafraichit l'ecran courant.
@@ -489,12 +559,12 @@ async function syncState(){
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.getElementById('navbar').style.display = (id==='login-who' || id==='login-pin') ? 'none' : 'flex';
+  document.getElementById('navbar').style.display = (id==='login-who' || id==='login-pin' || id==='device-setup') ? 'none' : 'flex';
   document.querySelectorAll('#navbar button').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
   current = id;
-  renderGlobalAlert();
-  if(id==='settings') renderBlePrinterStatus();
-  if(id==='login-who' || id==='login-pin'){
+  if(state) renderGlobalAlert();
+  if(id==='settings'){ renderBlePrinterStatus(); renderDeviceRestaurantLabel(); }
+  if(id==='login-who' || id==='login-pin' || id==='device-setup'){
     clearAutoLogout();
   } else if(id==='printed'){
     if(idleTimer){ clearTimeout(idleTimer); idleTimer = null; }
@@ -525,7 +595,15 @@ function isExpired(p){
   if(!p.lastPrinted) return false;
   return todayISO() > p.lastPrinted.dlcDate;
 }
-function allExpiredProducts(){ return state.products.filter(isExpired); }
+// Sur une tablette dediee a une zone (ex: Cuisine), l'alerte DLC ne montre
+// que les frigos de cette zone. Un frigo sans zone assignee reste visible
+// partout (donnees pas encore rangees par un admin apres la migration).
+function isVisibleInCurrentZone(p){
+  if(!currentZoneId) return true;
+  const f = state.fridges.find(x=>x.id===p.fridgeId);
+  return !f || !f.zoneId || f.zoneId === currentZoneId;
+}
+function allExpiredProducts(){ return state.products.filter(p=>isExpired(p) && isVisibleInCurrentZone(p)); }
 
 /* ---------------- Bluetooth printer (Niimbot B1) ---------------- */
 // Roll shipped with the printer: 40x20mm labels, printer is 203dpi.
@@ -806,6 +884,35 @@ function uiChoose(msg, options, title){
     box.querySelector('#m-yes').onclick = ()=>{ const v = parseInt(sel.value,10); closeModal(); resolve(v); };
   });
 }
+// Case a cocher multiple, ex: "a quel(s) restaurant(s) ceci s'applique".
+// options: [{value, label}] ; preselected: liste de values deja cochees.
+// Resout un tableau de values coches, ou null si annule.
+function uiMultiChoose(msg, options, preselected, title){
+  preselected = preselected || [];
+  return new Promise(resolve=>{
+    const box = document.getElementById('modal-box');
+    box.innerHTML = `
+      ${title ? `<div class="m-title">${title}</div>` : ''}
+      <div class="m-msg">${msg}</div>
+      <div style="margin-bottom:14px;">
+        ${options.map(o=>`
+          <label style="display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:14px;cursor:pointer;">
+            <input type="checkbox" class="m-multi" value="${o.value}" ${preselected.includes(o.value)?'checked':''} style="width:18px;height:18px;">
+            ${o.label}
+          </label>`).join('')}
+      </div>
+      <div class="m-btns">
+        <button id="m-no">Annuler</button>
+        <button class="primary" id="m-yes">Valider</button>
+      </div>`;
+    document.getElementById('modal-layer').classList.add('open');
+    box.querySelector('#m-no').onclick = ()=>{ closeModal(); resolve(null); };
+    box.querySelector('#m-yes').onclick = ()=>{
+      const checked = Array.from(box.querySelectorAll('.m-multi:checked')).map(el=>el.value);
+      closeModal(); resolve(checked);
+    };
+  });
+}
 
 /* ---------------- Global alert (visible on every screen) ---------------- */
 let alertIndex = 0;
@@ -855,7 +962,7 @@ async function confirmTreated(prodId){
   if(!ok) return;
   try{
     await api('/products/' + p.id + '/treated', {
-      method:'POST', body: JSON.stringify({ employee: who })
+      method:'POST', body: JSON.stringify({ employee: who, restaurantId: currentRestaurantId })
     });
     await loadState();
   }catch(e){ await uiAlert(e.message); return; }
@@ -915,7 +1022,7 @@ async function submitNewCategory(){
   const name = input.value.trim();
   if(!name) return;
   try{
-    await api('/categories', { method:'POST', body: JSON.stringify({ name }) });
+    await api('/categories', { method:'POST', body: JSON.stringify({ name, restaurantIds: [Number(currentRestaurantId)] }) });
     input.value='';
     await loadState();
     goBack();
@@ -926,8 +1033,12 @@ async function renameCategory(catId){
   if(!cat) return;
   const name = await uiPrompt('Nom de la catégorie', cat.name, 'Renommer');
   if(!name || !name.trim()) return;
+  let currentIds = [];
+  try{ currentIds = await api('/categories/' + catId + '/restaurants'); }catch(e){}
+  const restaurantIds = await pickRestaurantIds(currentIds);
+  if(restaurantIds === null || !restaurantIds.length) return;
   try{
-    await api('/categories/' + catId, { method:'PUT', body: JSON.stringify({ name: name.trim() }) });
+    await api('/categories/' + catId, { method:'PUT', body: JSON.stringify({ name: name.trim(), restaurantIds }) });
     await syncState();
   }catch(e){ await uiAlert(e.message); }
 }
@@ -987,7 +1098,7 @@ async function submitNewProduct(){
   if(!fridgeId){ uiAlert('Merci de choisir un frigo.'); return; }
   try{
     await api('/products', { method:'POST', body: JSON.stringify({
-      name, categoryId: ctx.newProdCategoryId, fridgeId, delayDays: newDelay
+      name, categoryId: ctx.newProdCategoryId, fridgeId, delayDays: newDelay, restaurantId: currentRestaurantId
     })});
     newDelay = 3;
     await loadState();
@@ -1013,7 +1124,36 @@ function renderProductDetail(){
   document.getElementById('preview-dlc').textContent = 'À consommer avant le ' + isoToFr(dlcISO);
   document.getElementById('preview-emp').textContent = currentUser ? (currentUser.name || 'Admin') : '';
   const delBtn = document.getElementById('delete-prod-btn');
-  if(delBtn) delBtn.style.display = (currentUser && currentUser.type==='admin') ? '' : 'none';
+  const isAdmin = currentUser && currentUser.type==='admin';
+  if(delBtn) delBtn.style.display = isAdmin ? '' : 'none';
+  const restField = document.getElementById('prod-restaurants-field');
+  if(restField) restField.style.display = isAdmin ? '' : 'none';
+  if(isAdmin) renderProductRestaurantsLabel();
+}
+async function renderProductRestaurantsLabel(){
+  const el = document.getElementById('prod-restaurants-label');
+  if(!el || !ctx.productId) return;
+  try{
+    const ids = await api('/products/' + ctx.productId + '/restaurants');
+    if(!allRestaurants.length) await loadAllRestaurants();
+    const names = ids.map(id=>{ const r = allRestaurants.find(x=>String(x.id)===String(id)); return r ? r.name : null; }).filter(Boolean);
+    el.textContent = names.join(', ') || '—';
+  }catch(e){ el.textContent = '—'; }
+}
+async function editProductRestaurants(){
+  if(!ctx.productId) return;
+  let currentIds = [];
+  try{ currentIds = await api('/products/' + ctx.productId + '/restaurants'); }catch(e){}
+  const restaurantIds = await pickRestaurantIds(currentIds, 'Restaurants pour ce produit');
+  if(restaurantIds === null || !restaurantIds.length) return;
+  const p = state.products.find(x=>x.id===ctx.productId);
+  const otherRestaurantIds = restaurantIds.filter(id => String(id) !== currentRestaurantId);
+  try{
+    await api('/products/' + ctx.productId, { method:'PUT', body: JSON.stringify({
+      restaurantId: currentRestaurantId, fridgeId: p ? p.fridgeId : null, otherRestaurantIds
+    })});
+    await renderProductRestaurantsLabel();
+  }catch(e){ await uiAlert(e.message); }
 }
 let delaySaveTimer = null;
 function stepProdDelay(delta){
@@ -1037,7 +1177,7 @@ async function printLabel(){
     // C'est le serveur qui calcule la date du jour et la DLC :
     // toutes les tablettes partagent ainsi la meme reference.
     r = await api('/products/' + p.id + '/print', {
-      method:'POST', body: JSON.stringify({ employee: employeeName })
+      method:'POST', body: JSON.stringify({ employee: employeeName, restaurantId: currentRestaurantId })
     });
   }catch(e){ await uiAlert(e.message); return; }
 
@@ -1093,7 +1233,7 @@ async function selectFridge(fridgeId){
     if(p){
       p.fridgeId = fridgeId;
       try{
-        await api('/products/' + p.id, { method:'PUT', body: JSON.stringify({ fridgeId }) });
+        await api('/products/' + p.id, { method:'PUT', body: JSON.stringify({ fridgeId, restaurantId: currentRestaurantId }) });
       }catch(e){ await uiAlert(e.message); }
     }
   } else {
@@ -1107,7 +1247,7 @@ async function addFridgeInline(e){
   const name = await uiPrompt('Nom du frigo', 'Frigo ' + (state.fridges.length+1), 'Nouveau frigo');
   if(!name || !name.trim()) return;
   try{
-    await api('/fridges', { method:'POST', body: JSON.stringify({ name: name.trim() }) });
+    await api('/fridges', { method:'POST', body: JSON.stringify({ name: name.trim(), restaurantId: currentRestaurantId }) });
     await loadState();
     openFridgePicker(ctx.fridgePickerFor);
   }catch(e2){ await uiAlert(e2.message); }
@@ -1158,8 +1298,100 @@ function renderManage(){
   if(manageTab==='cats') return renderManageCats(body);
   if(manageTab==='prods') return renderManageProds(body);
   if(manageTab==='fridges') return renderManageFridges(body);
+  if(manageTab==='zones') return renderManageZones(body);
   if(manageTab==='users') return renderManageUsers(body);
+  if(manageTab==='restaurants') return renderManageRestaurants(body);
   if(manageTab==='log') return renderManageLog(body);
+}
+
+/* ---------------- Restaurants & zones (Gestion) ---------------- */
+function renderManageZones(body){
+  let rows = state.zones.map(z=>{
+    const n = state.fridges.filter(f=>f.zoneId===z.id).length;
+    return `<div class="manage-row">
+      <div class="info"><div class="mname">${z.name}</div><div class="msub">${n} frigo${n>1?'s':''}</div></div>
+      <div class="mactions">
+        <button onclick="manageRenameZone('${z.id}')">Renommer</button>
+        <button class="danger" onclick="manageDeleteZone('${z.id}')">Supprimer</button>
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty-hint">Aucune zone pour ce restaurant (ex : Cuisine, Salle).</div>`;
+  body.innerHTML = rows + `<button class="btn-primary manage-add-btn" style="margin-left:0;margin-right:0;" onclick="manageAddZone()">+ Ajouter une zone</button>`;
+}
+async function manageAddZone(){
+  const name = await uiPrompt('Nom de la zone', '', 'Nouvelle zone');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/zones', { method:'POST', body: JSON.stringify({ name: name.trim(), restaurantId: currentRestaurantId }) });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageRenameZone(zoneId){
+  const z = state.zones.find(x=>x.id===zoneId);
+  if(!z) return;
+  const name = await uiPrompt('Nom de la zone', z.name, 'Renommer');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/zones/' + zoneId, { method:'PUT', body: JSON.stringify({ name: name.trim() }) });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageDeleteZone(zoneId){
+  const z = state.zones.find(x=>x.id===zoneId);
+  if(!z) return;
+  if(!await uiConfirm(z.name, 'Supprimer cette zone ?', {okText:'Supprimer', danger:true})) return;
+  try{
+    await api('/zones/' + zoneId, { method:'DELETE' });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+
+function renderManageRestaurants(body){
+  const rows = allRestaurants.map(r=>{
+    const isCurrent = String(r.id)===currentRestaurantId;
+    return `<div class="manage-row">
+      <div class="info"><div class="mname">${r.name}${isCurrent?' · cette tablette':''}</div></div>
+      <div class="mactions">
+        <button onclick="manageRenameRestaurant('${r.id}')">Renommer</button>
+        <button class="danger" onclick="manageDeleteRestaurant('${r.id}')">Supprimer</button>
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty-hint">Aucun restaurant.</div>`;
+  body.innerHTML = rows + `<button class="btn-primary manage-add-btn" style="margin-left:0;margin-right:0;" onclick="manageAddRestaurant()">+ Ajouter un restaurant</button>`;
+}
+async function manageAddRestaurant(){
+  const name = await uiPrompt('Nom du restaurant', '', 'Nouveau restaurant');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/restaurants', { method:'POST', body: JSON.stringify({ name: name.trim() }) });
+    await loadAllRestaurants();
+    renderManage();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageRenameRestaurant(id){
+  const r = allRestaurants.find(x=>String(x.id)===String(id));
+  if(!r) return;
+  const name = await uiPrompt('Nom du restaurant', r.name, 'Renommer');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/restaurants/' + id, { method:'PUT', body: JSON.stringify({ name: name.trim() }) });
+    await loadAllRestaurants();
+    renderManage();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function manageDeleteRestaurant(id){
+  const r = allRestaurants.find(x=>String(x.id)===String(id));
+  if(!r) return;
+  const ok = await uiConfirm(
+    `Supprimer "${r.name}" supprimera aussi ses zones, ses frigos, et son historique. Les catégories, employés et produits partagés avec un autre restaurant resteront disponibles pour lui.`,
+    'Supprimer ce restaurant ?', {okText:'Supprimer', danger:true}
+  );
+  if(!ok) return;
+  try{
+    await api('/restaurants/' + id, { method:'DELETE' });
+    await loadAllRestaurants();
+    renderManage();
+  }catch(e){ await uiAlert(e.message); }
 }
 let logFilter = 'all';
 function setLogFilter(f){ logFilter = f; renderManage(); }
@@ -1167,7 +1399,7 @@ async function renderManageLog(body){
   body.innerHTML = '<div class="empty-hint">Chargement…</div>';
   let log = [];
   try{
-    const raw = await api('/log');
+    const raw = await api('/log?restaurantId=' + encodeURIComponent(currentRestaurantId));
     log = raw.map(e=>({
       type: e.type,
       at: e.at,
@@ -1204,7 +1436,7 @@ async function renderManageLog(body){
 async function clearLog(){
   if(!await uiConfirm('Tous les événements enregistrés seront supprimés.', 'Effacer l\'historique ?', {okText:'Effacer', danger:true})) return;
   try{
-    await api('/log', { method:'DELETE' });
+    await api('/log?restaurantId=' + encodeURIComponent(currentRestaurantId), { method:'DELETE' });
     renderManage();
   }catch(e){ await uiAlert(e.message); }
 }
@@ -1224,8 +1456,10 @@ async function manageAddEmployee(){
   if(!name || !name.trim()) return;
   const code = await uiPrompt('Code personnel à 4 chiffres', '', 'Code de ' + name.trim(), {numeric:true});
   if(!code || !/^\d{4}$/.test(code.trim())){ await uiAlert('Le code doit être composé de 4 chiffres.'); return; }
+  const restaurantIds = await pickRestaurantIds([currentRestaurantId]);
+  if(restaurantIds === null || !restaurantIds.length) return;
   try{
-    await api('/employees', { method:'POST', body: JSON.stringify({ name: name.trim(), code: code.trim() }) });
+    await api('/employees', { method:'POST', body: JSON.stringify({ name: name.trim(), code: code.trim(), restaurantIds }) });
     await syncState();
     renderEmployeeGrid();
   }catch(e){ await uiAlert(e.message); }
@@ -1237,8 +1471,12 @@ async function manageEditEmployee(empId){
   if(!name || !name.trim()) return;
   const code = await uiPrompt('Code personnel à 4 chiffres', emp.code, 'Code de ' + name.trim(), {numeric:true});
   if(!code || !/^\d{4}$/.test(code.trim())){ await uiAlert('Le code doit être composé de 4 chiffres.'); return; }
+  let currentIds = [];
+  try{ currentIds = await api('/employees/' + empId + '/restaurants'); }catch(e){}
+  const restaurantIds = await pickRestaurantIds(currentIds);
+  if(restaurantIds === null || !restaurantIds.length) return;
   try{
-    await api('/employees/' + empId, { method:'PUT', body: JSON.stringify({ name: name.trim(), code: code.trim() }) });
+    await api('/employees/' + empId, { method:'PUT', body: JSON.stringify({ name: name.trim(), code: code.trim(), restaurantIds }) });
     await syncState();
     renderEmployeeGrid();
   }catch(e){ await uiAlert(e.message); }
@@ -1270,8 +1508,10 @@ function renderManageCats(body){
 async function manageAddCategory(){
   const name = await uiPrompt('Nom de la catégorie', '', 'Nouvelle catégorie');
   if(!name || !name.trim()) return;
+  const restaurantIds = await pickRestaurantIds([currentRestaurantId]);
+  if(restaurantIds === null || !restaurantIds.length) return;
   try{
-    await api('/categories', { method:'POST', body: JSON.stringify({ name: name.trim() }) });
+    await api('/categories', { method:'POST', body: JSON.stringify({ name: name.trim(), restaurantIds }) });
     await syncState();
   }catch(e){ await uiAlert(e.message); }
 }
@@ -1310,12 +1550,21 @@ async function manageAddProduct(){
   const delayStr = await uiPrompt('Délai avant DLC, en jours', '3', name.trim(), {numeric:true});
   if(delayStr===null) return;
   const delay = Math.max(1, parseInt(delayStr,10) || 3);
+  const others = allRestaurants.length ? allRestaurants : (await loadAllRestaurants(), allRestaurants);
+  let otherRestaurantIds = [];
+  if(others.filter(r=>String(r.id)!==currentRestaurantId).length){
+    const picked = await pickRestaurantIds([currentRestaurantId], 'Aussi disponible dans...');
+    if(picked === null) return;
+    otherRestaurantIds = picked.filter(id => String(id) !== currentRestaurantId);
+  }
   try{
     await api('/products', { method:'POST', body: JSON.stringify({
       name: name.trim(),
       categoryId: state.categories[catIdx].id,
       fridgeId: state.fridges[fridgeIdx].id,
-      delayDays: delay
+      delayDays: delay,
+      restaurantId: currentRestaurantId,
+      otherRestaurantIds
     })});
     await syncState();
   }catch(e){ await uiAlert(e.message); }
@@ -1334,11 +1583,19 @@ function renderManageFridges(body){
   }).join('') || `<div class="empty-hint">Aucun frigo.</div>`;
   body.innerHTML = rows + `<button class="btn-primary manage-add-btn" style="margin-left:0;margin-right:0;" onclick="manageAddFridge()">+ Ajouter un frigo</button>`;
 }
+async function pickZoneId(currentZone){
+  const options = ['Aucune zone', ...state.zones.map(z=>z.name)];
+  const idx = await uiChoose('Zone du restaurant (ex: Cuisine, Salle)', options, 'Zone du frigo');
+  if(idx===null) return undefined; // annule
+  return idx===0 ? null : state.zones[idx-1].id;
+}
 async function manageAddFridge(){
   const name = await uiPrompt('Nom du frigo', 'Frigo ' + (state.fridges.length+1), 'Nouveau frigo');
   if(!name || !name.trim()) return;
+  const zoneId = await pickZoneId(null);
+  if(zoneId === undefined) return;
   try{
-    await api('/fridges', { method:'POST', body: JSON.stringify({ name: name.trim() }) });
+    await api('/fridges', { method:'POST', body: JSON.stringify({ name: name.trim(), restaurantId: currentRestaurantId, zoneId }) });
     await syncState();
   }catch(e){ await uiAlert(e.message); }
 }
@@ -1347,8 +1604,10 @@ async function manageRenameFridge(fridgeId){
   if(!f) return;
   const name = await uiPrompt('Nom du frigo', f.name, 'Renommer');
   if(!name || !name.trim()) return;
+  const zoneId = await pickZoneId(f.zoneId);
+  if(zoneId === undefined) return;
   try{
-    await api('/fridges/' + fridgeId, { method:'PUT', body: JSON.stringify({ name: name.trim() }) });
+    await api('/fridges/' + fridgeId, { method:'PUT', body: JSON.stringify({ name: name.trim(), zoneId }) });
     await syncState();
   }catch(e){ await uiAlert(e.message); }
 }
@@ -1395,6 +1654,48 @@ function startAdminLogin(){
   pin=''; updatePinDots();
   go('login-pin');
 }
+
+/* ---------------- Configuration de la tablette (restaurant + zone) ---------------- */
+async function startDeviceSetup(){
+  const code = await uiPrompt('Code administrateur', '', 'Configurer cette tablette', {numeric:true});
+  if(code === null) return;
+  let ok = false;
+  try{
+    const r = await api('/login', { method:'POST', body: JSON.stringify({ type:'admin', code }) });
+    ok = r && r.ok;
+  }catch(e){ ok = false; }
+  if(!ok){ await uiAlert('Code administrateur incorrect.'); return; }
+
+  let restaurants = [];
+  try{ restaurants = await api('/restaurants'); }catch(e){ await uiAlert('Connexion au serveur impossible.'); return; }
+  if(!restaurants.length){ await uiAlert("Aucun restaurant n'existe encore. Contactez le support."); return; }
+
+  const restIdx = await uiChoose('Restaurant de cette tablette', restaurants.map(r=>r.name), 'Configuration');
+  if(restIdx===null) return;
+  const restaurant = restaurants[restIdx];
+
+  let zones = [];
+  try{ zones = await api('/zones?restaurantId=' + restaurant.id); }catch(e){ zones = []; }
+  const zoneOptions = [...zones.map(z=>z.name), '+ Créer une nouvelle zone', 'Aucune zone'];
+  const zoneIdx = await uiChoose('Zone de cette tablette (ex : Cuisine, Salle)', zoneOptions, restaurant.name);
+  if(zoneIdx===null) return;
+
+  let zoneId = null;
+  if(zoneIdx < zones.length){
+    zoneId = zones[zoneIdx].id;
+  } else if(zoneIdx === zones.length){
+    const zoneName = await uiPrompt('Nom de la nouvelle zone', '', 'Nouvelle zone');
+    if(!zoneName || !zoneName.trim()) return;
+    try{
+      const z = await api('/zones', { method:'POST', body: JSON.stringify({ name: zoneName.trim(), restaurantId: restaurant.id }) });
+      zoneId = z.id;
+    }catch(e){ await uiAlert(e.message); return; }
+  }
+
+  saveDeviceConfig(restaurant.id, zoneId);
+  await uiAlert(`Tablette configurée pour ${restaurant.name}${zoneId ? '' : ''}.`, 'Configuration enregistrée');
+  location.reload();
+}
 function applyRolePermissions(){
   const isAdmin = currentUser && currentUser.type==='admin';
   document.getElementById('navbar').style.display = 'flex';
@@ -1434,7 +1735,7 @@ document.getElementById('keypad').addEventListener('click', (e)=>{
         result = await api('/login', { method:'POST', body: JSON.stringify(
           pendingLogin && pendingLogin.type==='admin'
             ? { type:'admin', code: attempt }
-            : { type:'employee', employeeId: pendingLogin.employee.id, code: attempt }
+            : { type:'employee', employeeId: pendingLogin.employee.id, code: attempt, restaurantId: currentRestaurantId }
         )});
       }catch(e){ result = null; }
 
@@ -1489,9 +1790,15 @@ function triggerInstall(){
   }
 }
 (async function init(){
+  if(!currentRestaurantId){
+    show('device-setup');
+    return;
+  }
   try{
     await loadState();
+    await loadAllRestaurants();
   }catch(e){
+    show('login-who');
     document.getElementById('employee-grid').innerHTML =
       '<div class="empty-hint" style="grid-column:1/-1;">Connexion au serveur impossible.<br>Vérifiez le réseau puis rechargez.</div>';
     return;
