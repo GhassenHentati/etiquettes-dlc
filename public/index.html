@@ -303,6 +303,20 @@
       <div class="titles"><div class="title" id="prod-title"></div><div class="sub" id="prod-sub"></div></div>
     </header>
     <div class="body-pad">
+      <div class="field" id="prod-name-field" style="display:none;">
+        <label>Nom du produit</label>
+        <div class="value-row" onclick="editProductName()" style="cursor:pointer;">
+          <span id="prod-name-label"></span>
+          <span style="color:var(--muted);font-size:12px;">changer ›</span>
+        </div>
+      </div>
+      <div class="field" id="prod-category-field" style="display:none;">
+        <label>Catégorie</label>
+        <div class="value-row" onclick="editProductCategory()" style="cursor:pointer;">
+          <span id="prod-category-label"></span>
+          <span style="color:var(--muted);font-size:12px;">changer ›</span>
+        </div>
+      </div>
       <div class="field">
         <label>Frigo</label>
         <div class="value-row" onclick="openFridgePicker('existing')" style="cursor:pointer;">
@@ -1129,6 +1143,33 @@ function renderProductDetail(){
   const restField = document.getElementById('prod-restaurants-field');
   if(restField) restField.style.display = isAdmin ? '' : 'none';
   if(isAdmin) renderProductRestaurantsLabel();
+  const nameField = document.getElementById('prod-name-field');
+  const catField = document.getElementById('prod-category-field');
+  if(nameField) nameField.style.display = isAdmin ? '' : 'none';
+  if(catField) catField.style.display = isAdmin ? '' : 'none';
+  document.getElementById('prod-name-label').textContent = p.name;
+  document.getElementById('prod-category-label').textContent = cat ? cat.name : '—';
+}
+async function editProductName(){
+  const p = state.products.find(x=>x.id===ctx.productId);
+  if(!p) return;
+  const name = await uiPrompt('Nom du produit', p.name, 'Renommer le produit');
+  if(!name || !name.trim()) return;
+  try{
+    await api('/products/' + p.id, { method:'PUT', body: JSON.stringify({ name: name.trim() }) });
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
+}
+async function editProductCategory(){
+  const p = state.products.find(x=>x.id===ctx.productId);
+  if(!p) return;
+  const idx = await uiChoose('Catégorie', state.categories.map(c=>c.name), p.name);
+  if(idx===null || !state.categories[idx]) return;
+  try{
+    await api('/products/' + p.id, { method:'PUT', body: JSON.stringify({ categoryId: state.categories[idx].id }) });
+    ctx.categoryId = state.categories[idx].id;
+    await syncState();
+  }catch(e){ await uiAlert(e.message); }
 }
 async function renderProductRestaurantsLabel(){
   const el = document.getElementById('prod-restaurants-label');
