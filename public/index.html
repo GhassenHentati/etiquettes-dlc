@@ -1889,6 +1889,11 @@ document.querySelectorAll('#navbar button').forEach(b=>{
 });
 
 /* ---------------- Boot ---------------- */
+// Necessaire pour que Chrome/Android propose une vraie installation
+// plutot qu'un simple raccourci avec le badge Chrome.
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', (e)=>{
   e.preventDefault();
