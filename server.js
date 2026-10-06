@@ -48,7 +48,6 @@ async function logEvent({ type, restaurantId, productName, fridgeName, employee,
 // deviendrait invisible dans la navigation par categorie de ces restaurants.
 async function syncProductRestaurants(productId, categoryId, restaurantId, fridgeId, otherRestaurantIds) {
   const current = Number(restaurantId);
-  const targetIds = [current, ...(otherRestaurantIds || []).map(Number).filter(n => n !== current)];
 
   await pool.query(
     `INSERT INTO product_restaurants (product_id, restaurant_id, fridge_id)
@@ -56,6 +55,16 @@ async function syncProductRestaurants(productId, categoryId, restaurantId, fridg
      ON CONFLICT (product_id, restaurant_id) DO UPDATE SET fridge_id = EXCLUDED.fridge_id`,
     [productId, current, fridgeId || null]
   );
+
+  // otherRestaurantIds n'est fourni que par l'ecran "Autres restaurants" (edition
+  // explicite du partage). Un simple changement de frigo (otherRestaurantIds
+  // absent) ne doit JAMAIS toucher aux autres restaurants : sans cette garde,
+  // chaque changement de frigo sur un produit partage supprimait silencieusement
+  // son suivi (frigo, historique) dans tous les autres restaurants qui le
+  // partagent — bug reel ayant cause une perte de donnees en production.
+  if (otherRestaurantIds === undefined) return;
+
+  const targetIds = [current, ...(otherRestaurantIds || []).map(Number).filter(n => n !== current)];
 
   for (const rid of targetIds) {
     if (rid === current) continue;
