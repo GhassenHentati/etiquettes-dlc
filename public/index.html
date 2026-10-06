@@ -191,6 +191,8 @@
     #print-area .p-line{ font-size:8pt; margin-top:1.5mm; }
     #print-area .p-dlc{ font-size:10pt; font-weight:700; margin-top:1mm; }
     #print-area .p-emp{ font-size:7pt; text-align:right; margin-top:2mm; color:#333; }
+    #print-area .print-label{ page-break-after: always; }
+    #print-area .print-label:last-child{ page-break-after: auto; }
   }
   .sticker .p-emp{ text-align:right; font-size:10px; color:var(--muted); margin-top:6px; font-family:"IBM Plex Sans",sans-serif; }
 </style>
@@ -342,6 +344,13 @@
           <span style="color:var(--muted);font-size:12px;">changer ›</span>
         </div>
       </div>
+      <div class="field">
+        <label>Nombre d'étiquettes</label>
+        <div class="value-row">
+          <span id="prod-qty-label">1 étiquette</span>
+          <div class="stepper"><button onclick="stepPrintQty(-1)">−</button><span id="prod-qty-val">1</span><button onclick="stepPrintQty(1)">+</button></div>
+        </div>
+      </div>
       <button class="btn-dark" onclick="printLabel()">Imprimer l'étiquette</button>
       <div class="label-preview">
         <div class="caption">Aperçu de l'étiquette</div>
@@ -446,10 +455,7 @@
 </div>
 
 <div id="print-area">
-  <div class="p-name" id="print-name"></div>
-  <div class="p-line" id="print-line"></div>
-  <div class="p-dlc" id="print-dlc"></div>
-  <div class="p-emp" id="print-emp"></div>
+  <div id="print-copies"></div>
 </div>
 
 <script src="vendor/niimbluelib.browser.min.js"></script>
@@ -758,21 +764,25 @@ function buildLabelCanvas(productName, fridgeNameStr, printDateISO, dlcISO, empl
   return canvas;
 }
 
-async function printLabelBluetooth(productName, fridgeNameStr, printDateISO, dlcISO, employeeName){
+async function printLabelBluetooth(productName, fridgeNameStr, printDateISO, dlcISO, employeeName, qty){
   if(!bleAvailable()) return false;
   const client = getBleClient();
   if(!client.isConnected()){
     const reconnected = await tryAutoReconnect();
     if(!reconnected) return false;
   }
+  const copies = Math.max(1, qty || 1);
   const canvas = buildLabelCanvas(productName, fridgeNameStr, printDateISO, dlcISO, employeeName);
   const meta = client.getModelMetadata();
   const density = (meta && meta.densityDefault) || 3;
   const encoded = Niimblue.ImageEncoder.encodeCanvas(canvas, Niimblue.PageColorType.SingleColor, 'top');
-  const task = client.protocol.newPrintTask(NIIMBOT_MODEL, { totalPages: 1, density, labelType: Niimblue.LabelType.WithGaps });
+  // totalPages = combien d'etiquettes physiques distinctes dans ce job ; le
+  // 2e argument de printPage = combien de copies imprimer de CETTE page.
+  // Une seule image suffit, imprimee "copies" fois d'un coup.
+  const task = client.protocol.newPrintTask(NIIMBOT_MODEL, { totalPages: copies, density, labelType: Niimblue.LabelType.WithGaps });
   try{
     await task.printInit();
-    await task.printPage(encoded, 1);
+    await task.printPage(encoded, copies);
     await task.waitForPageFinished();
     await task.waitForFinished();
     return true;
@@ -1120,6 +1130,17 @@ function openAddProduct(){
   document.getElementById('addprod-title').textContent='Nouveau produit';
   go('add-product');
 }
+let printQty = 1;
+function stepPrintQty(delta){
+  printQty = Math.max(1, Math.min(50, printQty + delta));
+  renderPrintQty();
+}
+function renderPrintQty(){
+  const val = document.getElementById('prod-qty-val');
+  const label = document.getElementById('prod-qty-label');
+  if(val) val.textContent = printQty;
+  if(label) label.textContent = printQty + (printQty>1 ? ' étiquettes' : ' étiquette');
+}
 let newDelay = 3;
 function stepNewDelay(delta){
   newDelay = Math.max(1, newDelay + delta);
@@ -1169,6 +1190,8 @@ function renderProductDetail(){
   if(catField) catField.style.display = isAdmin ? '' : 'none';
   document.getElementById('prod-name-label').textContent = p.name;
   document.getElementById('prod-category-label').textContent = cat ? cat.name : '—';
+  printQty = 1;
+  renderPrintQty();
 }
 async function editProductName(){
   const p = state.products.find(x=>x.id===ctx.productId);
@@ -1233,10 +1256,12 @@ async function printLabel(){
   const p = state.products.find(x=>x.id===ctx.productId);
   if(!p) return;
   const employeeName = currentUser ? (currentUser.name || 'Admin') : '';
+  const qty = Math.max(1, printQty || 1);
   let r;
   try{
     // C'est le serveur qui calcule la date du jour et la DLC :
-    // toutes les tablettes partagent ainsi la meme reference.
+    // toutes les tablettes partagent ainsi la meme reference. Un seul appel
+    // meme pour plusieurs etiquettes : elles portent toutes la meme DLC.
     r = await api('/products/' + p.id + '/print', {
       method:'POST', body: JSON.stringify({ employee: employeeName, restaurantId: currentRestaurantId })
     });
@@ -1244,21 +1269,38 @@ async function printLabel(){
 
   let printedViaBluetooth = false;
   try{
-    printedViaBluetooth = await printLabelBluetooth(r.productName, r.fridgeName, r.printDate, r.dlcDate, employeeName);
+    printedViaBluetooth = await printLabelBluetooth(r.productName, r.fridgeName, r.printDate, r.dlcDate, employeeName, qty);
   }catch(e){
     console.warn("Impression Bluetooth impossible, bascule sur l'impression navigateur :", e);
   }
 
   if(!printedViaBluetooth){
-    document.getElementById('print-name').textContent = r.productName;
-    document.getElementById('print-line').textContent = `Imprimé ${isoToFr(r.printDate)} · ${r.fridgeName || '-'}`;
-    document.getElementById('print-dlc').textContent = `À consommer avant le ${isoToFr(r.dlcDate)}`;
-    document.getElementById('print-emp').textContent = employeeName;
+    const container = document.getElementById('print-copies');
+    container.innerHTML = '';
+    for(let i=0; i<qty; i++){
+      container.appendChild(buildPrintCopyEl(
+        r.productName,
+        `Imprimé ${isoToFr(r.printDate)} · ${r.fridgeName || '-'}`,
+        `À consommer avant le ${isoToFr(r.dlcDate)}`,
+        employeeName
+      ));
+    }
     window.print();
   }
 
+  printQty = 1;
+  renderPrintQty();
   await loadState();
   go('printed');
+}
+function buildPrintCopyEl(productName, lineText, dlcText, empText){
+  const div = document.createElement('div');
+  div.className = 'print-label';
+  const n = document.createElement('div'); n.className = 'p-name'; n.textContent = productName; div.appendChild(n);
+  const l = document.createElement('div'); l.className = 'p-line'; l.textContent = lineText; div.appendChild(l);
+  const d = document.createElement('div'); d.className = 'p-dlc'; d.textContent = dlcText; div.appendChild(d);
+  const e = document.createElement('div'); e.className = 'p-emp'; e.textContent = empText; div.appendChild(e);
+  return div;
 }
 async function deleteProduct(){
   const p = state.products.find(x=>x.id===ctx.productId);
