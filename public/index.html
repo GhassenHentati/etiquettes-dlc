@@ -1085,7 +1085,7 @@ async function deleteCategory(catId){
     : `Supprimer la catégorie "${cat.name}" ?`;
   if(!await uiConfirm(msg, 'Supprimer la catégorie', {okText:'Supprimer', danger:true})) return;
   try{
-    await api('/categories/' + catId, { method:'DELETE' });
+    await api('/categories/' + catId + '?restaurantId=' + encodeURIComponent(currentRestaurantId), { method:'DELETE' });
     await syncState();
   }catch(e){ await uiAlert(e.message); }
 }
@@ -1265,7 +1265,7 @@ async function deleteProduct(){
   if(!p) return;
   if(!await uiConfirm(p.name, 'Supprimer ce produit ?', {okText:'Supprimer', danger:true})) return;
   try{
-    await api('/products/' + p.id, { method:'DELETE' });
+    await api('/products/' + p.id + '?restaurantId=' + encodeURIComponent(currentRestaurantId), { method:'DELETE' });
     await loadState();
     goBack();
   }catch(e){ await uiAlert(e.message); }
@@ -1563,7 +1563,7 @@ async function manageDeleteEmployee(empId){
   if(!emp) return;
   if(!await uiConfirm(emp.name, 'Supprimer cet utilisateur ?', {okText:'Supprimer', danger:true})) return;
   try{
-    await api('/employees/' + empId, { method:'DELETE' });
+    await api('/employees/' + empId + '?restaurantId=' + encodeURIComponent(currentRestaurantId), { method:'DELETE' });
     await syncState();
     renderEmployeeGrid();
   }catch(e){ await uiAlert(e.message); }
@@ -1611,7 +1611,7 @@ async function manageDeleteProduct(prodId){
   if(!p) return;
   if(!await uiConfirm(p.name, 'Supprimer ce produit ?', {okText:'Supprimer', danger:true})) return;
   try{
-    await api('/products/' + prodId, { method:'DELETE' });
+    await api('/products/' + prodId + '?restaurantId=' + encodeURIComponent(currentRestaurantId), { method:'DELETE' });
     await syncState();
   }catch(e){ await uiAlert(e.message); }
 }

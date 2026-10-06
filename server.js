@@ -286,9 +286,67 @@ app.put('/api/categories/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Supprimer une categorie est toujours local au restaurant courant : on
+// retire seulement le suivi des produits de cette categorie pour CE
+// restaurant (comme deleteProduct), et on ne supprime la categorie/les
+// produits definitivement que s'ils ne sont plus rattaches a AUCUN restaurant.
 app.delete('/api/categories/:id', wrap(async (req, res) => {
-  await pool.query('DELETE FROM categories WHERE id = $1', [req.params.id]);
-  res.json({ ok: true });
+  const restaurantId = req.query.restaurantId || (req.body && req.body.restaurantId);
+  if (!restaurantId) return res.status(400).json({ error: 'Restaurant requis' });
+  const categoryId = req.params.id;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows: prodRows } = await client.query(
+      `SELECT p.id FROM products p
+       JOIN product_restaurants pr ON pr.product_id = p.id AND pr.restaurant_id = $2
+       WHERE p.category_id = $1`,
+      [categoryId, restaurantId]
+    );
+    for (const { id: productId } of prodRows) {
+      await client.query(
+        'DELETE FROM product_restaurants WHERE product_id = $1 AND restaurant_id = $2',
+        [productId, restaurantId]
+      );
+      const { rows: remaining } = await client.query(
+        'SELECT COUNT(*)::int AS n FROM product_restaurants WHERE product_id = $1',
+        [productId]
+      );
+      if (remaining[0].n === 0) {
+        await client.query('DELETE FROM products WHERE id = $1', [productId]);
+      }
+    }
+
+    await client.query(
+      'DELETE FROM category_restaurants WHERE category_id = $1 AND restaurant_id = $2',
+      [categoryId, restaurantId]
+    );
+    const { rows: remainingCat } = await client.query(
+      'SELECT COUNT(*)::int AS n FROM category_restaurants WHERE category_id = $1',
+      [categoryId]
+    );
+    if (remainingCat[0].n === 0) {
+      // Garde-fou : la categorie entrainerait en cascade la suppression de
+      // tout produit qui la reference encore (ON DELETE CASCADE).
+      const { rows: stillUsed } = await client.query(
+        'SELECT COUNT(*)::int AS n FROM products WHERE category_id = $1',
+        [categoryId]
+      );
+      if (stillUsed[0].n === 0) {
+        await client.query('DELETE FROM categories WHERE id = $1', [categoryId]);
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }));
 
 // ---------- Frigos (objets physiques : un seul restaurant, une seule zone) ----------
@@ -377,8 +435,24 @@ app.put('/api/products/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Supprimer un produit est local au restaurant courant : seul son suivi
+// (frigo, historique) pour CE restaurant est retire. La definition partagee
+// n'est effacee que si plus aucun restaurant ne le suit.
 app.delete('/api/products/:id', wrap(async (req, res) => {
-  await pool.query('DELETE FROM products WHERE id = $1', [req.params.id]);
+  const restaurantId = req.query.restaurantId || (req.body && req.body.restaurantId);
+  if (!restaurantId) return res.status(400).json({ error: 'Restaurant requis' });
+
+  await pool.query(
+    'DELETE FROM product_restaurants WHERE product_id = $1 AND restaurant_id = $2',
+    [req.params.id, restaurantId]
+  );
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM product_restaurants WHERE product_id = $1',
+    [req.params.id]
+  );
+  if (rows[0].n === 0) {
+    await pool.query('DELETE FROM products WHERE id = $1', [req.params.id]);
+  }
   res.json({ ok: true });
 }));
 
@@ -526,8 +600,24 @@ app.put('/api/employees/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Supprimer un utilisateur est local au restaurant courant : on ne retire
+// que son acces a CE restaurant. Le compte n'est efface que s'il n'est plus
+// rattache a aucun restaurant.
 app.delete('/api/employees/:id', wrap(async (req, res) => {
-  await pool.query('DELETE FROM employees WHERE id = $1', [req.params.id]);
+  const restaurantId = req.query.restaurantId || (req.body && req.body.restaurantId);
+  if (!restaurantId) return res.status(400).json({ error: 'Restaurant requis' });
+
+  await pool.query(
+    'DELETE FROM employee_restaurants WHERE employee_id = $1 AND restaurant_id = $2',
+    [req.params.id, restaurantId]
+  );
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM employee_restaurants WHERE employee_id = $1',
+    [req.params.id]
+  );
+  if (rows[0].n === 0) {
+    await pool.query('DELETE FROM employees WHERE id = $1', [req.params.id]);
+  }
   res.json({ ok: true });
 }));
 
