@@ -442,7 +442,7 @@
       </div>
       <h1 style="font-family:'Archivo Narrow',sans-serif;font-size:19px;margin:0 0 8px 0;">Étiquette envoyée</h1>
       <p style="color:var(--muted);font-size:13px;margin:0 0 26px 0;">L'imprimante à étiquettes va sortir<br>le ticket autocollant.</p>
-      <button class="btn-primary" style="max-width:220px;margin:0 auto;" onclick="historyStack=[];show('dashboard');renderDashboard();">Retour aux catégories</button>
+      <button class="btn-primary" style="max-width:220px;margin:0 auto;" onclick="backToCategoryProducts()">Retour</button>
       <p style="color:var(--muted);font-size:12px;margin-top:16px;">Déconnexion dans <span id="printed-countdown">30</span> s</p>
     </div>
   </div>
@@ -1120,6 +1120,14 @@ function renderProducts(){
   body.innerHTML = rows + addLine;
 }
 function openProduct(prodId){ ctx.productId = prodId; go('product'); renderProductDetail(); }
+// Apres impression, revenir direct sur la liste de la categorie imprimee
+// (ex : Desserts) plutot que l'ecran des categories, pour enchainer vite
+// sur le produit suivant de la meme categorie.
+function backToCategoryProducts(){
+  historyStack = ['dashboard'];
+  show('products');
+  renderProducts();
+}
 function openAddProduct(){
   ctx.newProdCategoryId = ctx.categoryId;
   newDelay = 3;
