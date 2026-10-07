@@ -224,6 +224,7 @@
       <p style="color:var(--muted);font-size:10px;margin:6px 0 22px 0;">build 2026-09-25 · navigation étapes</p>
       <div class="fridge-grid" id="employee-grid" style="max-width:290px;margin:0 auto;"></div>
       <div class="btn-danger-text" style="color:var(--muted);margin-top:20px;" onclick="startAdminLogin()">Accès administrateur</div>
+      <div class="btn-danger-text" style="color:var(--muted);margin-top:10px;" onclick="connectPrinterQuick()">🖨️ Imprimante : <span id="login-ble-status">non connectée</span></div>
 
     </div>
   </div>
@@ -351,6 +352,7 @@
           <div class="stepper"><button onclick="stepPrintQty(-1)">−</button><span id="prod-qty-val">1</span><button onclick="stepPrintQty(1)">+</button></div>
         </div>
       </div>
+      <div class="btn-danger-text" style="color:var(--muted);margin-top:0;margin-bottom:10px;" onclick="connectPrinterQuick()">🖨️ Imprimante : <span id="product-ble-status">non connectée</span></div>
       <button class="btn-dark" onclick="printLabel()">Imprimer l'étiquette</button>
       <div class="label-preview">
         <div class="caption">Aperçu de l'étiquette</div>
@@ -585,7 +587,8 @@ function show(id){
   document.querySelectorAll('#navbar button').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
   current = id;
   if(state) renderGlobalAlert();
-  if(id==='settings'){ renderBlePrinterStatus(); renderDeviceRestaurantLabel(); }
+  renderBlePrinterStatus();
+  if(id==='settings'){ renderDeviceRestaurantLabel(); }
   if(id==='login-who' || id==='login-pin' || id==='device-setup'){
     clearAutoLogout();
   } else if(id==='printed'){
@@ -711,13 +714,31 @@ function disconnectPrinter(){
   renderBlePrinterStatus();
 }
 
+// Met a jour l'etat Bluetooth partout ou il est affiche : Reglages (admin),
+// et les mini-widgets accessibles a tous sur l'accueil et l'ecran produit
+// (l'imprimante Niimbot s'eteint seule par economie de batterie et se
+// deconnecte ; sans ca, seul un admin pouvait la reconnecter via Reglages).
 function renderBlePrinterStatus(){
-  const el = document.getElementById('ble-status');
-  if(!el) return;
-  el.textContent = bleConnected ? `Connectée : ${bleDeviceName}` : 'Non connectée';
-  el.style.color = bleConnected ? 'var(--fresh)' : 'var(--muted)';
+  const label = bleConnected ? `Connectée : ${bleDeviceName}` : 'Non connectée';
+  const color = bleConnected ? 'var(--fresh)' : 'var(--muted)';
+  ['ble-status', 'login-ble-status', 'product-ble-status'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.textContent = label; el.style.color = color; }
+  });
   const disBtn = document.getElementById('ble-disconnect-btn');
   if(disBtn) disBtn.style.display = bleConnected ? '' : 'none';
+}
+// Essaie d'abord une reconnexion silencieuse (imprimante deja appairee,
+// juste rendormie) ; si ca echoue, ouvre le selecteur Bluetooth natif
+// (necessite un appui humain, donc jamais declenche automatiquement).
+async function connectPrinterQuick(){
+  if(bleConnected){
+    await uiAlert(`Déjà connectée à ${bleDeviceName}.`, 'Imprimante');
+    return;
+  }
+  const reconnected = await tryAutoReconnect();
+  if(reconnected) return;
+  await pairPrinter();
 }
 
 function buildLabelCanvas(productName, fridgeNameStr, printDateISO, dlcISO, employeeName){
