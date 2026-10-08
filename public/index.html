@@ -1965,6 +1965,28 @@ document.querySelectorAll('#navbar button').forEach(b=>{
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
+
+// Empeche la mise en veille de l'ecran tant que l'app reste au premier plan
+// (tablette dediee en cuisine). Sans ca, Android suspend les timers JS -
+// dont le heartbeat Bluetooth envoye toutes les 2s a l'imprimante Niimbot -
+// des que l'ecran s'eteint, ce qui finit par deconnecter/eteindre
+// l'imprimante. Le verrou est relache automatiquement par le navigateur
+// quand l'onglet passe en arriere-plan ; on le redemande des qu'il revient
+// au premier plan.
+let wakeLock = null;
+async function requestWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  try{
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', ()=>{ wakeLock = null; });
+  }catch(e){
+    console.warn("Reveil ecran indisponible :", e);
+  }
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') requestWakeLock();
+});
+requestWakeLock();
 let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', (e)=>{
   e.preventDefault();
