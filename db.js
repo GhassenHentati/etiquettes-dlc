@@ -170,6 +170,18 @@ async function initDb() {
     );
   `);
 
+  // Food cost : un type de marchandise peut etre exclu du calcul (produits de
+  // nettoyage). A l'ajout de la colonne, on exclut les types "nettoyage"
+  // deja existants ; ensuite c'est le gerant qui decide.
+  const { rows: fcCol } = await pool.query(`
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'fc_types' AND column_name = 'in_food_cost'
+  `);
+  if (!fcCol.length) {
+    await pool.query('ALTER TABLE fc_types ADD COLUMN in_food_cost BOOLEAN NOT NULL DEFAULT true');
+    await pool.query(`UPDATE fc_types SET in_food_cost = false WHERE name ILIKE '%nettoy%'`);
+  }
+
   // Mot de passe administrateur par defaut au tout premier lancement.
   await pool.query(
     `INSERT INTO settings (key, value) VALUES ('admin_password', '1234')

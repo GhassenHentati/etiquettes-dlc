@@ -46,7 +46,9 @@ Code : `foodcost.js` (API `/api/fc/...`).
 - **Clôture** : fige les prix d'achat ; un changement de prix ultérieur ne
   modifie plus la valeur d'un inventaire passé.
 - **Food cost** d'une période = stock début (inventaire clôturé précédent)
-  + achats − stock fin, divisé par le chiffre d'affaires.
+  + achats − stock fin, divisé par le chiffre d'affaires. Calculé sur les
+  matières premières et les emballages ; un type peut être exclu (par défaut
+  les produits de nettoyage, vaisselle & autres).
 - **Types de marchandise** : Matières premières, Emballages, Produits
   nettoyage, vaisselle & autres (modifiables). Chaque article a un type ; la
   valeur du stock est totalisée par type (pas par zone, les zones servent

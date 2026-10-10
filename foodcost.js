@@ -85,8 +85,9 @@ async function seedTypesOnce(restaurantId) {
   let firstId = null;
   for (let i = 0; i < DEFAULT_TYPES.length; i++) {
     const r = await pool.query(
-      'INSERT INTO fc_types (restaurant_id, name, position) VALUES ($1, $2, $3) RETURNING id',
-      [restaurantId, DEFAULT_TYPES[i], i]
+      `INSERT INTO fc_types (restaurant_id, name, position, in_food_cost)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [restaurantId, DEFAULT_TYPES[i], i, !/nettoy/i.test(DEFAULT_TYPES[i])]
     );
     if (i === 0) firstId = r.rows[0].id;
   }
@@ -106,13 +107,16 @@ const LINE_VALUE_SQL = `
   )`;
 
 // Valeur d'un inventaire : prix fige si cloture, sinon prix actuel de l'article.
+// fc_total = seulement les types comptes dans le food cost (sans nettoyage).
 const INVENTORY_TOTALS_SQL = `
   SELECT inv.id, inv.label, inv.inv_date::text AS inv_date, inv.status, inv.purchases, inv.sales, inv.closed_at,
          COALESCE(SUM(${LINE_VALUE_SQL}), 0)::float AS total,
+         COALESCE(SUM(${LINE_VALUE_SQL}) FILTER (WHERE COALESCE(t.in_food_cost, true)), 0)::float AS fc_total,
          COUNT(c.item_id)::int AS counted
   FROM fc_inventories inv
   LEFT JOIN fc_counts c ON c.inventory_id = inv.id
   LEFT JOIN fc_items i ON i.id = c.item_id
+  LEFT JOIN fc_types t ON t.id = i.type_id
   WHERE inv.restaurant_id = $1
   GROUP BY inv.id
   ORDER BY inv.inv_date DESC, inv.id DESC
@@ -132,7 +136,7 @@ router.get('/state', wrap(async (req, res) => {
       [restaurantId]
     ),
     pool.query(
-      'SELECT id, name, position FROM fc_types WHERE restaurant_id = $1 ORDER BY position, id',
+      'SELECT id, name, position, in_food_cost FROM fc_types WHERE restaurant_id = $1 ORDER BY position, id',
       [restaurantId]
     ),
     pool.query(
@@ -192,22 +196,25 @@ router.delete('/shelves/:id', wrap(async (req, res) => {
 // ---------- Types de marchandise ----------
 
 router.post('/types', wrap(async (req, res) => {
-  const { name, restaurantId } = req.body || {};
+  const { name, restaurantId, inFoodCost } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: 'Nom requis' });
   if (!restaurantId) return res.status(400).json({ error: 'Restaurant requis' });
   const { rows } = await pool.query(
-    `INSERT INTO fc_types (restaurant_id, name, position)
-     VALUES ($1, $2, (SELECT COALESCE(MAX(position), -1) + 1 FROM fc_types WHERE restaurant_id = $1))
-     RETURNING id, name, position`,
-    [restaurantId, name.trim()]
+    `INSERT INTO fc_types (restaurant_id, name, position, in_food_cost)
+     VALUES ($1, $2, (SELECT COALESCE(MAX(position), -1) + 1 FROM fc_types WHERE restaurant_id = $1), $3)
+     RETURNING id, name, position, in_food_cost`,
+    [restaurantId, name.trim(), inFoodCost !== false]
   );
   res.json(rows[0]);
 }));
 
 router.put('/types/:id', wrap(async (req, res) => {
-  const { name } = req.body || {};
+  const { name, inFoodCost } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: 'Nom requis' });
-  await pool.query('UPDATE fc_types SET name = $1 WHERE id = $2', [name.trim(), req.params.id]);
+  await pool.query(
+    'UPDATE fc_types SET name = $1, in_food_cost = COALESCE($2, in_food_cost) WHERE id = $3',
+    [name.trim(), typeof inFoodCost === 'boolean' ? inFoodCost : null, req.params.id]
+  );
   res.json({ ok: true });
 }));
 

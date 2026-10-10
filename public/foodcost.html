@@ -256,8 +256,8 @@ function inventoryLines(){
 }
 // Totaux par type de marchandise (le gerant ne veut pas de total par zone).
 function typeTotals(){
-  const rows = data.types.map(t => ({ id:t.id, name:t.name, value:0 }));
-  const other = { id:null, name:'Sans type', value:0 };
+  const rows = data.types.map(t => ({ id:t.id, name:t.name, inFc:t.in_food_cost !== false, value:0 }));
+  const other = { id:null, name:'Sans type', inFc:true, value:0 };
   inventoryLines().forEach(l => {
     const r = rows.find(x => x.id === l.item.type_id) || other;
     r.value += l.value;
@@ -581,7 +581,8 @@ function periodFor(inv){
     .filter(i => i.inv_date < inv.inv_date || (i.inv_date === inv.inv_date && i.id < inv.id))
     .sort((a,b) => a.inv_date < b.inv_date ? 1 : a.inv_date > b.inv_date ? -1 : b.id - a.id);
   const prev = sorted[0] || null;
-  const res = { prev, opening: prev ? prev.total : null, purchases: inv.purchases, closing: inv.total, sales: inv.sales };
+  // Seuls les types comptes dans le food cost (pas le nettoyage).
+  const res = { prev, opening: prev ? prev.fc_total : null, purchases: inv.purchases, closing: inv.fc_total, sales: inv.sales };
   if(prev && inv.purchases !== null){
     res.consumption = res.opening + res.purchases - res.closing;
     if(inv.sales) res.pct = res.consumption / inv.sales * 100;
@@ -619,13 +620,15 @@ function renderInvDetail(){
   const maxV = Math.max(1, ...totals.map(t => t.value));
   html += `<div class="type-bars" style="margin-top:14px">`;
   totals.forEach(t => {
-    html += `<div class="type-bar"><div class="tb-head"><span><span class="type-dot" style="background:${typeColor(t.id)}"></span>${esc(t.name)}</span><span>${money(t.value)}</span></div>
+    html += `<div class="type-bar"><div class="tb-head"><span><span class="type-dot" style="background:${typeColor(t.id)}"></span>${esc(t.name)}${t.inFc ? '' : ' <span class="hint" style="font-size:13px">(hors food cost)</span>'}</span><span>${money(t.value)}</span></div>
       <div class="tb-track"><span style="width:${t.value / maxV * 100}%;background:${typeColor(t.id)}"></span></div></div>`;
   });
   html += `<div class="type-total"><span>Total stock</span><span>${money(inv.total)}</span></div></div>`;
 
   html += `<h2>Food cost de la période</h2>`;
-  html += `<div class="field"><label>Achats de marchandises de la période (CHF, factures fournisseurs)</label>
+  const excluded = data.types.filter(t => t.in_food_cost === false).map(t => t.name);
+  if(excluded.length) html += `<p class="hint" style="margin-top:-4px">Calculé sur ${esc(data.types.filter(t => t.in_food_cost !== false).map(t => t.name.toLowerCase()).join(' + '))}. Non compté : ${esc(excluded.join(', ').toLowerCase())}.</p>`;
+  html += `<div class="field"><label>Achats de la période${excluded.length ? ' <b>sans ' + esc(excluded.join(', ').toLowerCase()) + '</b>' : ''} (CHF, factures fournisseurs)</label>
       <input id="f-purchases" inputmode="decimal" value="${inv.purchases ?? ''}" placeholder="ex. 18500" onchange="savePeriod(${inv.id})"></div>
     <div class="field"><label>Chiffre d'affaires de la période (CHF)</label>
       <input id="f-sales" inputmode="decimal" value="${inv.sales ?? ''}" placeholder="ex. 62000" onchange="savePeriod(${inv.id})"></div>`;
@@ -716,7 +719,7 @@ function renderCatalog(){
   let html = `<div class="shelf-head" style="margin-top:4px"><h2>Types de marchandise</h2><button onclick="addType()">+ Type</button></div>`;
   data.types.forEach(t => {
     const n = activeItems().filter(i => i.type_id === t.id).length;
-    html += `<div class="admin-row" onclick="editType(${t.id})"><div class="info"><span class="type-dot" style="background:${typeColor(t.id)}"></span>${esc(t.name)}</div><div class="hint">${n} article(s)</div></div>`;
+    html += `<div class="admin-row" onclick="editType(${t.id})"><div class="info"><span class="type-dot" style="background:${typeColor(t.id)}"></span>${esc(t.name)}${t.in_food_cost === false ? ' <span class="hint" style="font-size:13px;font-weight:500">(hors food cost)</span>' : ''}</div><div class="hint">${n} article(s)</div></div>`;
   });
   html += activeItems().length > 8 ? `<input class="search" style="margin-top:18px" placeholder="Rechercher un article…" oninput="filterCatalog(this.value)">` : '';
   data.shelves.forEach(s => {
@@ -747,8 +750,10 @@ async function addType(){
 }
 async function editType(id){
   const t = data.types.find(x => x.id === id);
-  await openForm({ title:'Type de marchandise', fields:[{ key:'name', label:'Nom', value:t.name }],
-    onSubmit: v => api('/fc/types/' + id, { method:'PUT', body:{ name:v.name } }),
+  await openForm({ title:'Type de marchandise', fields:[{ key:'name', label:'Nom', value:t.name },
+      { key:'fc', label:'Compté dans le food cost ?', type:'select', value: t.in_food_cost === false ? 'non' : 'oui',
+        options:[{ value:'oui', label:'Oui' }, { value:'non', label:'Non (ex. produits de nettoyage)' }] }],
+    onSubmit: v => api('/fc/types/' + id, { method:'PUT', body:{ name:v.name, inFoodCost: v.fc === 'oui' } }),
     extra:{ label:'Supprimer ce type', onClick: async () => {
       if(!(await confirmBox('Supprimer « ' + t.name + ' » ?', 'Aucun article ne doit avoir ce type.', 'Supprimer', true))) return;
       try{ await api('/fc/types/' + id, { method:'DELETE' }); }catch(e){ await showMessage('Impossible', e.message); }
