@@ -30,6 +30,25 @@ les écrans, y compris avant connexion. Tant que des alertes existent, un employ
 connecté ne peut rien faire d'autre que les traiter. Après confirmation,
 l'application propose de réimprimer une étiquette avec une date recalculée.
 
+## Inventaire & food cost
+
+Page `/foodcost.html` (bouton « Inventaire & food cost » sur l'accueil).
+Code : `foodcost.js` (API `/api/fc/...`).
+
+- **Étagères / zones** : créées par défaut (Étagère épices, Étagère garage,
+  Boissons, Frigo tacos, Frigo shawarma, Congélateur, Chambre froide),
+  modifiables par le gérant.
+- **Gérant** (même code que l'administrateur) : saisit les articles, leur unité
+  de comptage et leur prix d'achat en CHF ; ouvre et clôture les inventaires.
+- **Employé** : choisit une étagère et saisit la quantité de chaque article
+  (boutons +/−, décimales acceptées, enregistrement automatique). Il ne voit
+  pas les prix.
+- **Clôture** : fige les prix d'achat ; un changement de prix ultérieur ne
+  modifie plus la valeur d'un inventaire passé.
+- **Food cost** d'une période = stock début (inventaire clôturé précédent)
+  + achats − stock fin, divisé par le chiffre d'affaires.
+- Export CSV (séparateur `;`, ouvre directement dans Excel).
+
 ## Déploiement sur Render
 
 1. Créer un dépôt Git avec ces fichiers et le pousser sur GitHub

@@ -96,6 +96,57 @@ async function initDb() {
       at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE;
+
+    -- ---------- Food cost (inventaire mensuel valorise) ----------
+    -- Etageres / zones de stock : propres a un restaurant (objets physiques).
+    CREATE TABLE IF NOT EXISTS fc_shelves (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    -- Article stocke : prix d'achat en CHF par unite. Un article deja compte
+    -- dans un inventaire est archive plutot que supprime, pour garder
+    -- l'historique des inventaires lisible.
+    CREATE TABLE IF NOT EXISTS fc_items (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      shelf_id INTEGER REFERENCES fc_shelves(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      unit TEXT NOT NULL DEFAULT 'pce',
+      price NUMERIC(12,4) NOT NULL DEFAULT 0,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    -- Un inventaire = un comptage a une date. Achats et chiffre d'affaires
+    -- concernent la periode qui se termine a cet inventaire.
+    CREATE TABLE IF NOT EXISTS fc_inventories (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      inv_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      status TEXT NOT NULL DEFAULT 'open',
+      purchases NUMERIC(12,2),
+      sales NUMERIC(12,2),
+      closed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    -- unit_price reste NULL tant que l'inventaire est ouvert (on valorise au
+    -- prix actuel de l'article) et est fige a la cloture.
+    CREATE TABLE IF NOT EXISTS fc_counts (
+      inventory_id INTEGER NOT NULL REFERENCES fc_inventories(id) ON DELETE CASCADE,
+      item_id INTEGER NOT NULL REFERENCES fc_items(id) ON DELETE CASCADE,
+      qty NUMERIC(12,3) NOT NULL,
+      unit_price NUMERIC(12,4),
+      counted_by TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (inventory_id, item_id)
+    );
   `);
 
   // Mot de passe administrateur par defaut au tout premier lancement.

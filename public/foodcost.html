@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1F2A22">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Food cost">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%231F2A22'/%3E%3Ctext x='50' y='64' font-size='40' text-anchor='middle' fill='%23F4C64B' font-family='sans-serif' font-weight='700'%3ECHF%3C/text%3E%3C/svg%3E">
+<title>Food cost</title>
+<style>
+  :root{
+    --bg: #EEF0EA;
+    --surface: #FFFFFF;
+    --ink: #1F2A22;
+    --muted: #6C766A;
+    --line: #D3D8CC;
+    --fresh: #3E7A54;
+    --fresh-dim: #E4EFE6;
+    --warn: #C1402A;
+    --warn-dim: #F7E2DC;
+    --tape: #F4C64B;
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:var(--bg); color:var(--ink); }
+  .app{ max-width:620px; margin:0 auto; min-height:100vh; background:var(--surface); border-left:1px solid var(--line); border-right:1px solid var(--line); display:flex; flex-direction:column; }
+  .tab-strip{ display:flex; gap:2px; padding:10px 14px 0 14px; background:var(--bg); border-bottom:1px solid var(--line); }
+  .tab-strip .notch{ width:34px; height:10px; background:var(--tape); border-radius:2px 2px 0 0; }
+  header{ position:sticky; top:0; z-index:20; background:var(--surface); padding:12px 16px 12px 10px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; }
+  header .back{ width:36px; height:36px; border:none; background:none; border-radius:50%; cursor:pointer; color:var(--ink); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  header .back:active{ background:var(--bg); }
+  header .back[hidden]{ display:none; }
+  header .titles{ flex:1; min-width:0; }
+  header .title{ font-family:"Archivo Narrow","IBM Plex Sans Condensed",sans-serif; font-weight:700; font-size:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header .sub{ font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header .head-action{ font-size:12px; color:var(--fresh); font-weight:600; background:none; border:none; cursor:pointer; font-family:inherit; padding:6px 0; white-space:nowrap; }
+  main{ flex:1; padding:16px 16px 110px 16px; }
+  .footer-bar{ position:sticky; bottom:0; background:var(--ink); color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+  .footer-bar strong{ font-size:18px; font-variant-numeric:tabular-nums; }
+  .footer-bar[hidden]{ display:none; }
+
+  h2{ font-family:"Archivo Narrow",sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:22px 0 10px 0; }
+  h2:first-child{ margin-top:4px; }
+  .hint{ color:var(--muted); font-size:13px; line-height:1.45; }
+  .btn{ display:block; width:100%; padding:14px; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; margin-top:8px; }
+  .btn-primary{ background:var(--fresh); color:#fff; }
+  .btn-dark{ background:var(--ink); color:#fff; }
+  .btn-ghost{ background:var(--surface); color:var(--ink); border:1px solid var(--line); }
+  .btn-danger{ background:var(--surface); color:var(--warn); border:1px solid var(--warn); }
+  .btn:disabled{ background:var(--line); color:var(--muted); cursor:not-allowed; }
+  .link{ color:var(--muted); font-size:13px; text-align:center; margin-top:22px; cursor:pointer; background:none; border:none; width:100%; font-family:inherit; padding:8px; }
+
+  .card{ border:1px solid var(--line); border-radius:6px; padding:14px; margin-bottom:10px; background:var(--surface); }
+  .card.clickable{ cursor:pointer; }
+  .card.clickable:active{ background:var(--bg); }
+  .card .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .card .name{ font-weight:600; font-size:15px; }
+  .card .meta{ font-size:12px; color:var(--muted); margin-top:4px; }
+  .card .value{ font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .progress{ height:6px; background:var(--bg); border-radius:3px; overflow:hidden; margin-top:10px; }
+  .progress span{ display:block; height:100%; background:var(--fresh); }
+  .pill{ font-size:11px; border-radius:20px; padding:2px 9px; border:1px solid currentColor; white-space:nowrap; }
+  .pill.open{ color:var(--fresh); }
+  .pill.closed{ color:var(--muted); }
+  .pill.done{ color:#fff; background:var(--fresh); border-color:var(--fresh); }
+
+  .item-row{ display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--line); }
+  .item-row:last-child{ border-bottom:none; }
+  .item-row .info{ flex:1; min-width:0; }
+  .item-row .iname{ font-size:15px; font-weight:500; }
+  .item-row .imeta{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .item-row.counted .iname::after{ content:" ✓"; color:var(--fresh); font-weight:700; }
+  .qty{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .qty button{ width:40px; height:40px; border-radius:50%; border:1px solid var(--ink); background:var(--surface); font-size:20px; cursor:pointer; line-height:1; color:var(--ink); }
+  .qty button:active{ background:var(--bg); }
+  .qty input{ width:72px; height:42px; text-align:center; font-size:18px; border:1px solid var(--line); border-radius:6px; font-family:inherit; font-variant-numeric:tabular-nums; color:var(--ink); }
+  .qty input:focus{ outline:2px solid var(--fresh); border-color:var(--fresh); }
+  .qty .unit{ font-size:12px; color:var(--muted); width:44px; }
+  .item-row.readonly .qty input{ background:var(--bg); }
+  .save-state{ font-size:11px; color:var(--muted); text-align:right; height:14px; margin-bottom:4px; }
+  .save-state.err{ color:var(--warn); }
+
+  .admin-row{ display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .admin-row .info{ flex:1; min-width:0; }
+  .admin-row .price{ font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
+  .add-line{ padding:12px 2px; color:var(--fresh); font-size:13px; font-weight:600; cursor:pointer; border-top:1px dashed var(--line); }
+  .shelf-head{ display:flex; align-items:center; justify-content:space-between; margin:22px 0 4px 0; }
+  .shelf-head h2{ margin:0; }
+  .shelf-head button{ background:none; border:none; color:var(--fresh); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
+
+  table.calc{ width:100%; border-collapse:collapse; font-size:14px; }
+  table.calc td{ padding:9px 2px; border-bottom:1px solid var(--line); }
+  table.calc td:last-child{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  table.calc tr.total td{ font-weight:700; border-bottom:2px solid var(--ink); }
+  .big-result{ text-align:center; padding:18px; border-radius:6px; background:var(--fresh-dim); margin:14px 0; }
+  .big-result .pct{ font-family:"Archivo Narrow",sans-serif; font-size:42px; font-weight:700; color:var(--fresh); }
+  .big-result.high{ background:var(--warn-dim); }
+  .big-result.high .pct{ color:var(--warn); }
+  .big-result .lbl{ font-size:12px; color:var(--muted); }
+
+  .field{ margin-bottom:14px; }
+  .field label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+  .field input, .field select{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:6px; font-size:15px; font-family:inherit; color:var(--ink); background:var(--surface); }
+
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:260px; margin:0 auto; }
+  .keypad button{ padding:16px 0; font-size:18px; border:1px solid var(--line); background:var(--surface); border-radius:6px; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .keypad button:active{ background:var(--bg); }
+  .pin-dots{ display:flex; gap:14px; justify-content:center; margin:18px 0 22px 0; }
+  .pin-dots span{ width:14px; height:14px; border-radius:50%; border:2px solid var(--ink); }
+  .pin-dots span.filled{ background:var(--ink); }
+  .pin-dots.error span{ border-color:var(--warn); }
+  .center{ text-align:center; }
+  .lock-title{ font-family:"Archivo Narrow",sans-serif; font-size:22px; font-weight:700; margin:30px 0 6px 0; text-align:center; }
+
+  #modal{ display:none; position:fixed; inset:0; background:rgba(31,42,34,.55); z-index:50; align-items:center; justify-content:center; padding:16px; }
+  #modal.open{ display:flex; }
+  .modal-box{ background:var(--surface); border-radius:8px; padding:20px; width:100%; max-width:380px; max-height:90vh; overflow-y:auto; }
+  .modal-box .m-title{ font-size:16px; font-weight:600; margin-bottom:8px; }
+  .modal-box .m-msg{ font-size:13px; color:var(--muted); white-space:pre-line; margin-bottom:14px; }
+  .modal-box .m-err{ font-size:12px; color:var(--warn); min-height:16px; margin-bottom:6px; }
+  .modal-box .m-btns{ display:flex; gap:8px; }
+  .modal-box .m-btns button{ flex:1; padding:12px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; border:1px solid var(--line); background:var(--surface); color:var(--ink); }
+  .modal-box .m-btns button.primary{ background:var(--fresh); color:#fff; border-color:var(--fresh); }
+  .modal-box .m-btns button.danger{ background:var(--warn); color:#fff; border-color:var(--warn); }
+
+  .tabs{ display:flex; border-bottom:1px solid var(--line); margin:-16px -16px 16px -16px; background:var(--surface); }
+  .tabs button{ flex:1; padding:13px 4px; border:none; background:none; font-family:inherit; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:3px solid transparent; }
+  .tabs button.active{ color:var(--ink); border-bottom-color:var(--tape); }
+  .search{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:6px; font-size:15px; font-family:inherit; margin-bottom:6px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="tab-strip"><div class="notch"></div></div>
+  <header>
+    <button class="back" id="back-btn" hidden onclick="goBack()" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="titles">
+      <div class="title" id="h-title">Food cost</div>
+      <div class="sub" id="h-sub"></div>
+    </div>
+    <button class="head-action" id="h-action" hidden></button>
+  </header>
+  <main id="main"></main>
+  <div class="footer-bar" id="footer" hidden></div>
+</div>
+
+<div id="modal"><div class="modal-box" id="modal-box"></div></div>
+
+<script>
+/* ================= Etat ================= */
+// Meme origine que l'app Etiquettes DLC : on reprend le restaurant configure
+// sur cette tablette.
+const RESTAURANT_KEY = 'dlc-restaurant-id';
+const NAME_KEY = 'fc-employee-name';
+const UNITS = ['pce', 'kg', 'g', 'L', 'bouteille', 'canette', 'carton', 'sac', 'boîte', 'paquet', 'bidon', 'pot'];
+
+let restaurantId = lsGet(RESTAURANT_KEY);
+let restaurants = [];
+let isManager = false;          // gerant : voit et modifie les prix
+let data = { shelves:[], items:[], inventories:[] };
+let inventory = null;           // inventaire ouvert a l'ecran (avec counts)
+let route = { name:'home' };
+let stack = [];
+
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+const chf = new Intl.NumberFormat('fr-CH', { style:'currency', currency:'CHF', minimumFractionDigits:2, maximumFractionDigits:2 });
+function money(n){ return chf.format(n || 0); }
+function qtyStr(n){ return (Math.round(n*1000)/1000).toLocaleString('fr-CH', { maximumFractionDigits:3 }); }
+function parseNum(s){
+  if(s === null || s === undefined) return null;
+  s = String(s).trim().replace(',', '.');
+  if(s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+function isoToFr(iso){ if(!iso) return '—'; const [y,m,d] = String(iso).slice(0,10).split('-'); return `${d}.${m}.${y}`; }
+function todayISO(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function api(path, options){
+  const opts = Object.assign({ headers:{ 'Content-Type':'application/json' } }, options || {});
+  if(opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
+  const res = await fetch('/api' + path, opts);
+  let body = null;
+  try{ body = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error((body && body.error) || 'Erreur réseau');
+  return body;
+}
+
+async function loadState(){
+  data = await api('/fc/state?restaurantId=' + encodeURIComponent(restaurantId));
+}
+async function loadInventory(id){
+  inventory = await api('/fc/inventories/' + id);
+  inventory.countMap = {};
+  inventory.counts.forEach(c => { inventory.countMap[c.item_id] = c; });
+}
+
+function activeItems(){ return data.items.filter(i => !i.archived); }
+function itemsOf(shelfId){ return activeItems().filter(i => i.shelf_id === shelfId); }
+function openInventory(){ return data.inventories.find(i => i.status === 'open'); }
+// Prix d'une ligne : fige a la cloture, sinon prix actuel de l'article.
+function linePrice(item){
+  const c = inventory && inventory.countMap[item.id];
+  return c && c.unit_price !== null ? c.unit_price : item.price;
+}
+function inventoryLines(){
+  return data.items
+    .filter(it => inventory.countMap[it.id])
+    .map(it => {
+      const c = inventory.countMap[it.id];
+      const price = linePrice(it);
+      return { item:it, qty:c.qty, price, value:c.qty * price };
+    });
+}
+function shelfValue(shelfId){
+  return inventoryLines().filter(l => l.item.shelf_id === shelfId).reduce((s,l) => s + l.value, 0);
+}
+function inventoryValue(){ return inventoryLines().reduce((s,l) => s + l.value, 0); }
+
+/* ================= Navigation ================= */
+function go(name, params){ stack.push(route); route = Object.assign({ name }, params || {}); render(); window.scrollTo(0,0); }
+function goBack(){ route = stack.pop() || { name:'home' }; refreshAndRender(); window.scrollTo(0,0); }
+function goHome(){ stack = []; route = { name:'home' }; refreshAndRender(); }
+
+async function refreshAndRender(){
+  try{
+    await loadState();
+    if(inventory) await loadInventory(inventory.id);
+  }catch(e){ console.error(e); }
+  render();
+}
+
+function setHeader(title, sub, action){
+  document.getElementById('h-title').textContent = title;
+  document.getElementById('h-sub').textContent = sub || '';
+  document.getElementById('back-btn').hidden = stack.length === 0;
+  const a = document.getElementById('h-action');
+  if(action){ a.hidden = false; a.textContent = action.label; a.onclick = action.onClick; }
+  else { a.hidden = true; a.onclick = null; }
+}
+function setFooter(html){
+  const f = document.getElementById('footer');
+  if(html){ f.hidden = false; f.innerHTML = html; } else { f.hidden = true; f.innerHTML = ''; }
+}
+function restaurantName(){ const r = restaurants.find(r => String(r.id) === String(restaurantId)); return r ? r.name : ''; }
+
+function render(){
+  const screens = { home:renderHome, pickRestaurant:renderPickRestaurant, pin:renderPin, shelves:renderShelves, count:renderCount,
+                    inventories:renderInventories, invDetail:renderInvDetail, catalog:renderCatalog };
+  (screens[route.name] || renderHome)();
+}
+
+/* ================= Modale ================= */
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function showMessage(title, msg){
+  return openForm({ title, message:msg, fields:[], submit:'OK', cancel:null });
+}
+function confirmBox(title, msg, okLabel, danger){
+  return openForm({ title, message:msg, fields:[], submit:okLabel || 'Confirmer', danger }).then(r => !!r);
+}
+// fields: [{ key, label, type, value, options, placeholder, inputmode, list }]
+// onSubmit(values) peut lever une erreur : elle s'affiche dans la modale.
+function openForm({ title, message, fields, submit, cancel, danger, onSubmit, extra }){
+  return new Promise(resolve => {
+    const box = document.getElementById('modal-box');
+    let html = `<div class="m-title">${esc(title)}</div>`;
+    if(message) html += `<div class="m-msg">${esc(message)}</div>`;
+    (fields || []).forEach((f, idx) => {
+      html += `<div class="field"><label for="mf${idx}">${esc(f.label)}</label>`;
+      if(f.type === 'select'){
+        html += `<select id="mf${idx}">` + f.options.map(o => `<option value="${esc(o.value)}" ${String(o.value)===String(f.value)?'selected':''}>${esc(o.label)}</option>`).join('') + `</select>`;
+      } else {
+        html += `<input id="mf${idx}" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" placeholder="${esc(f.placeholder || '')}" ${f.inputmode?`inputmode="${f.inputmode}"`:''} ${f.list?`list="${f.list}"`:''} autocomplete="off">`;
+      }
+      html += `</div>`;
+    });
+    html += `<datalist id="units-list">${UNITS.map(u => `<option value="${u}">`).join('')}</datalist>`;
+    html += `<div class="m-err" id="m-err"></div><div class="m-btns">`;
+    if(cancel !== null) html += `<button id="m-cancel">${esc(cancel || 'Annuler')}</button>`;
+    html += `<button id="m-ok" class="${danger?'danger':'primary'}">${esc(submit || 'Enregistrer')}</button></div>`;
+    if(extra) html += `<button class="link" id="m-extra" style="color:var(--warn)">${esc(extra.label)}</button>`;
+    box.innerHTML = html;
+    document.getElementById('modal').classList.add('open');
+    const first = box.querySelector('input'); if(first) setTimeout(() => first.focus(), 50);
+
+    const values = () => {
+      const v = {}; (fields || []).forEach((f, idx) => { v[f.key] = document.getElementById('mf'+idx).value; }); return v;
+    };
+    const ok = async () => {
+      const v = values();
+      if(onSubmit){
+        try{ await onSubmit(v); }
+        catch(e){ document.getElementById('m-err').textContent = e.message; return; }
+      }
+      closeModal(); resolve(v);
+    };
+    document.getElementById('m-ok').onclick = ok;
+    box.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if(e.key === 'Enter') ok(); }));
+    const c = document.getElementById('m-cancel'); if(c) c.onclick = () => { closeModal(); resolve(null); };
+    const x = document.getElementById('m-extra');
+    if(x) x.onclick = async () => { closeModal(); await extra.onClick(); resolve(null); };
+  });
+}
+
+/* ================= Accueil ================= */
+function renderHome(){
+  setHeader('Food cost', restaurantName() + (isManager ? ' · Gérant' : ''));
+  setFooter(null);
+  const main = document.getElementById('main');
+  const open = openInventory();
+  const name = lsGet(NAME_KEY);
+  let html = '';
+
+  html += `<h2>Inventaire en cours</h2>`;
+  if(open){
+    const total = activeItems().length;
+    const pct = total ? Math.round(open.counted / total * 100) : 0;
+    html += `<div class="card clickable" onclick="startCounting(${open.id})">
+      <div class="row"><div><div class="name">${esc(open.label)}</div><div class="meta">${isoToFr(open.inv_date)} · ${open.counted} / ${total} articles comptés</div></div>
+      ${isManager ? `<div class="value">${money(open.total)}</div>` : ''}</div>
+      <div class="progress"><span style="width:${pct}%"></span></div></div>
+      <button class="btn btn-primary" onclick="startCounting(${open.id})">Compter le stock</button>`;
+  } else {
+    html += `<p class="hint">Aucun inventaire en cours.${isManager ? '' : ' Le gérant doit en ouvrir un (début ou fin de mois).'}</p>`;
+    if(isManager) html += `<button class="btn btn-primary" onclick="newInventory()">Nouvel inventaire</button>`;
+  }
+
+  if(isManager){
+    html += `<h2>Gestion</h2>
+      <button class="btn btn-dark" onclick="go('inventories')">Inventaires & calcul du food cost</button>
+      <button class="btn btn-ghost" onclick="go('catalog')">Articles, prix & étagères</button>
+      <button class="link" onclick="isManager=false;render()">Quitter le mode gérant</button>`;
+  } else {
+    html += `<button class="link" onclick="go('pin')">Accès gérant</button>`;
+  }
+  html += `<p class="hint center" style="margin-top:18px;font-size:12px;">
+    ${name ? `Compté par : <b>${esc(name)}</b> · <a href="#" onclick="askName();return false;">changer</a>` : ''}
+    ${restaurants.length > 1 ? ` · <a href="#" onclick="go('pickRestaurant');return false;">changer de restaurant</a>` : ''}
+    · <a href="/">Étiquettes DLC</a></p>`;
+  main.innerHTML = html;
+}
+
+async function askName(){
+  const v = await openForm({ title:'Votre prénom', message:'Il est enregistré avec chaque quantité saisie.', fields:[{ key:'name', label:'Prénom', value:lsGet(NAME_KEY) || '' }], submit:'OK',
+    onSubmit: v => { if(!v.name.trim()) throw new Error('Prénom requis'); } });
+  if(v){ lsSet(NAME_KEY, v.name.trim()); render(); }
+  return v;
+}
+
+async function startCounting(id){
+  if(!lsGet(NAME_KEY) && !(await askName())) return;
+  await loadInventory(id);
+  go('shelves');
+}
+
+function renderPickRestaurant(){
+  setHeader('Restaurant', 'Choisir le restaurant à inventorier');
+  setFooter(null);
+  document.getElementById('main').innerHTML = restaurants.map(r =>
+    `<div class="card clickable" onclick="pickRestaurant(${r.id})"><div class="name">${esc(r.name)}</div></div>`).join('')
+    || `<p class="hint">Aucun restaurant. Créez-en un dans l'application Étiquettes DLC.</p>`;
+}
+async function pickRestaurant(id){
+  restaurantId = String(id); lsSet(RESTAURANT_KEY, restaurantId);
+  inventory = null; goHome();
+}
+
+/* ================= Code gerant ================= */
+let pin = '';
+function renderPin(){
+  setHeader('Accès gérant', 'Même code que l’administrateur Étiquettes DLC');
+  setFooter(null);
+  pin = '';
+  const keys = [1,2,3,4,5,6,7,8,9].map(n => `<button onclick="pinKey('${n}')">${n}</button>`).join('');
+  document.getElementById('main').innerHTML = `<div class="lock-title">Code gérant</div>
+    <div class="pin-dots" id="dots"><span></span><span></span><span></span><span></span></div>
+    <div class="keypad">${keys}<button onclick="pinKey('C')" style="font-size:13px;color:var(--muted)">Effacer</button><button onclick="pinKey('0')">0</button><button onclick="goBack()" style="font-size:13px;color:var(--muted)">Annuler</button></div>`;
+}
+async function pinKey(k){
+  if(k === 'C'){ pin = ''; } else if(pin.length < 4){ pin += k; }
+  const dots = document.getElementById('dots');
+  dots.classList.remove('error');
+  dots.querySelectorAll('span').forEach((s,i) => s.classList.toggle('filled', i < pin.length));
+  if(pin.length === 4){
+    try{
+      await api('/login', { method:'POST', body:{ type:'admin', code:pin } });
+      isManager = true; goHome();
+    }catch(e){
+      dots.classList.add('error'); pin = '';
+      setTimeout(() => dots.querySelectorAll('span').forEach(s => s.classList.remove('filled')), 250);
+    }
+  }
+}
+
+/* ================= Comptage : liste des etageres ================= */
+function renderShelves(){
+  const counted = id => itemsOf(id).filter(i => inventory.countMap[i.id]).length;
+  setHeader(inventory.label, isoToFr(inventory.inv_date) + (inventory.status === 'closed' ? ' · clôturé' : ' · choisir une étagère / zone'));
+  let html = '';
+  if(inventory.status === 'closed') html += `<p class="hint">Cet inventaire est clôturé : lecture seule.</p>`;
+  data.shelves.forEach(s => {
+    const total = itemsOf(s.id).length;
+    const n = counted(s.id);
+    const done = total > 0 && n === total;
+    html += `<div class="card clickable" onclick="go('count',{shelfId:${s.id}})">
+      <div class="row"><div><div class="name">${esc(s.name)}</div><div class="meta">${n} / ${total} comptés</div></div>
+      <div style="text-align:right">${isManager ? `<div class="value">${money(shelfValue(s.id))}</div>` : ''}${done ? '<span class="pill done">Terminé</span>' : ''}</div></div>
+      <div class="progress"><span style="width:${total ? n/total*100 : 0}%"></span></div></div>`;
+  });
+  if(!data.shelves.length) html += `<p class="hint">Aucune étagère. Le gérant doit les créer dans « Articles, prix & étagères ».</p>`;
+  document.getElementById('main').innerHTML = html;
+  const all = activeItems().length, n = activeItems().filter(i => inventory.countMap[i.id]).length;
+  setFooter(isManager
+    ? `<span>${n} / ${all} articles</span><span>Total stock <strong>${money(inventoryValue())}</strong></span>`
+    : `<span>Progression</span><strong>${n} / ${all}</strong>`);
+}
+
+/* ================= Comptage : une etagere ================= */
+let saveTimers = {};
+function renderCount(){
+  const shelf = data.shelves.find(s => s.id === route.shelfId);
+  if(!shelf){ goBack(); return; }
+  const readonly = inventory.status !== 'open';
+  setHeader(shelf.name, inventory.label);
+  const items = itemsOf(shelf.id);
+  let html = `<div class="save-state" id="save-state"></div>`;
+  if(items.length > 8) html += `<input class="search" placeholder="Rechercher un article…" oninput="filterRows(this.value)">`;
+  html += `<div id="rows">`;
+  items.forEach(it => {
+    const c = inventory.countMap[it.id];
+    const val = c ? qtyStr(c.qty) : '';
+    html += `<div class="item-row ${c?'counted':''} ${readonly?'readonly':''}" data-id="${it.id}" data-name="${esc(it.name.toLowerCase())}">
+      <div class="info"><div class="iname">${esc(it.name)}</div>
+        ${isManager ? `<div class="imeta">${money(linePrice(it))} / ${esc(it.unit)}<span id="lv-${it.id}">${c ? ' · ' + money(c.qty * linePrice(it)) : ''}</span></div>` : ''}</div>
+      <div class="qty">
+        ${readonly ? '' : `<button onclick="stepQty(${it.id},-1)" aria-label="Moins">−</button>`}
+        <input id="q-${it.id}" inputmode="decimal" value="${val}" placeholder="—" ${readonly?'readonly':''} oninput="onQtyInput(${it.id})" onfocus="this.select()">
+        ${readonly ? '' : `<button onclick="stepQty(${it.id},1)" aria-label="Plus">+</button>`}
+        <span class="unit">${esc(it.unit)}</span>
+      </div></div>`;
+  });
+  html += `</div>`;
+  if(!items.length) html += `<p class="hint">Aucun article sur cette étagère.${isManager ? '' : ' Le gérant doit les ajouter.'}</p>`;
+  if(isManager && !readonly) html += `<div class="add-line" onclick="editItem(null, ${shelf.id}, true)">+ Ajouter un article ici</div>`;
+  if(!readonly && items.length) html += `<p class="hint" style="margin-top:14px">Laisser vide = pas encore compté. Mettre 0 si l'article est en rupture.</p>`;
+  document.getElementById('main').innerHTML = html;
+  updateCountFooter(shelf.id);
+}
+function filterRows(q){
+  q = q.trim().toLowerCase();
+  document.querySelectorAll('#rows .item-row').forEach(r => { r.style.display = !q || r.dataset.name.includes(q) ? '' : 'none'; });
+}
+function updateCountFooter(shelfId){
+  const items = itemsOf(shelfId), n = items.filter(i => inventory.countMap[i.id]).length;
+  setFooter(isManager
+    ? `<span>${n} / ${items.length} comptés</span><span>Étagère <strong>${money(shelfValue(shelfId))}</strong></span>`
+    : `<span>Comptés</span><strong>${n} / ${items.length}</strong>`);
+}
+function stepQty(itemId, delta){
+  const input = document.getElementById('q-' + itemId);
+  const cur = parseNum(input.value);
+  const next = Math.max(0, (Number.isFinite(cur) ? cur : 0) + delta);
+  input.value = qtyStr(next);
+  onQtyInput(itemId);
+}
+function onQtyInput(itemId){
+  clearTimeout(saveTimers[itemId]);
+  saveTimers[itemId] = setTimeout(() => saveQty(itemId), 450);
+}
+async function saveQty(itemId){
+  const input = document.getElementById('q-' + itemId);
+  if(!input) return;
+  const state = document.getElementById('save-state');
+  const n = parseNum(input.value);
+  if(Number.isNaN(n) || n < 0){ state.textContent = 'Quantité invalide'; state.className = 'save-state err'; return; }
+  state.textContent = 'Enregistrement…'; state.className = 'save-state';
+  try{
+    await api(`/fc/inventories/${inventory.id}/counts/${itemId}`, { method:'PUT', body:{ qty: n === null ? '' : n, countedBy: lsGet(NAME_KEY) } });
+    if(n === null) delete inventory.countMap[itemId];
+    else inventory.countMap[itemId] = Object.assign(inventory.countMap[itemId] || { unit_price:null }, { item_id:itemId, qty:n });
+    state.textContent = 'Enregistré ✓';
+    const row = input.closest('.item-row'); row.classList.toggle('counted', n !== null);
+    const item = data.items.find(i => i.id === itemId);
+    const lv = document.getElementById('lv-' + itemId);
+    if(lv) lv.textContent = n !== null ? ' · ' + money(n * linePrice(item)) : '';
+    updateCountFooter(item.shelf_id);
+  }catch(e){
+    state.textContent = 'Non enregistré : ' + e.message; state.className = 'save-state err';
+  }
+}
+
+/* ================= Gerant : inventaires ================= */
+async function newInventory(){
+  const d = new Date();
+  const month = d.toLocaleDateString('fr-CH', { month:'long', year:'numeric' });
+  const v = await openForm({ title:'Nouvel inventaire', message:'Un inventaire en fin de mois sert aussi de stock de début pour le mois suivant.',
+    fields:[{ key:'label', label:'Nom', value:'Inventaire ' + month }, { key:'date', label:'Date', type:'date', value:todayISO() }],
+    submit:'Créer',
+    onSubmit: async v => { const r = await api('/fc/inventories', { method:'POST', body:{ restaurantId, label:v.label, invDate:v.date } }); v.id = r.id; } });
+  if(!v) return;
+  await loadState();
+  await loadInventory(v.id);
+  go('invDetail', { id:v.id });
+}
+
+// Food cost de la periode qui se termine a l'inventaire `inv` :
+// stock de debut = inventaire cloture precedent (par date).
+function periodFor(inv){
+  const sorted = data.inventories.filter(i => i.status === 'closed' && i.id !== inv.id)
+    .filter(i => i.inv_date < inv.inv_date || (i.inv_date === inv.inv_date && i.id < inv.id))
+    .sort((a,b) => a.inv_date < b.inv_date ? 1 : a.inv_date > b.inv_date ? -1 : b.id - a.id);
+  const prev = sorted[0] || null;
+  const res = { prev, opening: prev ? prev.total : null, purchases: inv.purchases, closing: inv.total, sales: inv.sales };
+  if(prev && inv.purchases !== null){
+    res.consumption = res.opening + res.purchases - res.closing;
+    if(inv.sales) res.pct = res.consumption / inv.sales * 100;
+  }
+  return res;
+}
+
+function renderInventories(){
+  setHeader('Inventaires', restaurantName(), { label:'+ Nouveau', onClick:newInventory });
+  setFooter(null);
+  let html = '';
+  if(!data.inventories.length) html = `<p class="hint">Aucun inventaire. Faites un premier inventaire (stock de départ), puis un à chaque fin de mois.</p>`;
+  data.inventories.forEach(inv => {
+    const p = periodFor(inv);
+    html += `<div class="card clickable" onclick="openInvDetail(${inv.id})">
+      <div class="row"><div><div class="name">${esc(inv.label)}</div>
+        <div class="meta">${isoToFr(inv.inv_date)} · ${inv.counted} lignes${p.pct !== undefined ? ` · food cost <b>${p.pct.toFixed(1)} %</b>` : ''}</div></div>
+      <div style="text-align:right"><div class="value">${money(inv.total)}</div><span class="pill ${inv.status}">${inv.status === 'open' ? 'En cours' : 'Clôturé'}</span></div></div></div>`;
+  });
+  document.getElementById('main').innerHTML = html;
+}
+async function openInvDetail(id){ await loadInventory(id); go('invDetail', { id }); }
+
+function renderInvDetail(){
+  const inv = data.inventories.find(i => i.id === route.id);
+  if(!inv){ goBack(); return; }
+  const open = inv.status === 'open';
+  setHeader(inv.label, isoToFr(inv.inv_date) + (open ? ' · en cours' : ' · clôturé'), { label:'Modifier', onClick:() => editInventory(inv) });
+  setFooter(`<span>Valeur du stock</span><strong>${money(inv.total)}</strong>`);
+  const p = periodFor(inv);
+
+  let html = `<h2>Stock</h2>`;
+  html += `<button class="btn btn-primary" onclick="go('shelves')">${open ? 'Compter / voir par étagère' : 'Voir le détail par étagère'}</button>`;
+  html += `<table class="calc" style="margin-top:12px">`;
+  data.shelves.forEach(s => { html += `<tr><td>${esc(s.name)}</td><td>${money(shelfValue(s.id))}</td></tr>`; });
+  const orphan = inventoryLines().filter(l => !data.shelves.some(s => s.id === l.item.shelf_id)).reduce((s,l) => s + l.value, 0);
+  if(orphan) html += `<tr><td>Sans étagère / archivés</td><td>${money(orphan)}</td></tr>`;
+  html += `<tr class="total"><td>Total stock</td><td>${money(inv.total)}</td></tr></table>`;
+
+  html += `<h2>Food cost de la période</h2>`;
+  html += `<div class="field"><label>Achats de marchandises de la période (CHF, factures fournisseurs)</label>
+      <input id="f-purchases" inputmode="decimal" value="${inv.purchases ?? ''}" placeholder="ex. 18500" onchange="savePeriod(${inv.id})"></div>
+    <div class="field"><label>Chiffre d'affaires de la période (CHF)</label>
+      <input id="f-sales" inputmode="decimal" value="${inv.sales ?? ''}" placeholder="ex. 62000" onchange="savePeriod(${inv.id})"></div>`;
+  if(!p.prev){
+    html += `<p class="hint">Pas d'inventaire clôturé avant celui-ci : il sert de stock de départ. Le food cost se calcule à partir du prochain inventaire.</p>`;
+  } else {
+    html += `<table class="calc">
+      <tr><td>Stock début (${esc(p.prev.label)}, ${isoToFr(p.prev.inv_date)})</td><td>${money(p.opening)}</td></tr>
+      <tr><td>+ Achats de la période</td><td>${p.purchases !== null ? money(p.purchases) : '—'}</td></tr>
+      <tr><td>− Stock fin (cet inventaire)</td><td>${money(p.closing)}</td></tr>
+      <tr class="total"><td>= Consommation (coût marchandises)</td><td>${p.consumption !== undefined ? money(p.consumption) : '—'}</td></tr>
+      <tr><td>Chiffre d'affaires</td><td>${p.sales ? money(p.sales) : '—'}</td></tr></table>`;
+    if(p.pct !== undefined){
+      html += `<div class="big-result ${p.pct > 35 ? 'high' : ''}"><div class="pct">${p.pct.toFixed(1)} %</div><div class="lbl">Food cost = consommation ÷ chiffre d'affaires</div></div>`;
+    } else {
+      html += `<p class="hint">Saisissez les achats et le chiffre d'affaires pour obtenir le food cost en %.</p>`;
+    }
+  }
+
+  html += `<h2>Actions</h2>`;
+  html += `<button class="btn btn-ghost" onclick="exportCsv(${inv.id})">Exporter en CSV (Excel)</button>`;
+  if(open){
+    const missing = activeItems().filter(i => !inventory.countMap[i.id]).length;
+    html += `<button class="btn btn-dark" onclick="closeInventory(${inv.id}, ${missing})">Clôturer l'inventaire</button>`;
+  } else {
+    html += `<button class="btn btn-ghost" onclick="reopenInventory(${inv.id})">Rouvrir pour corriger</button>`;
+  }
+  html += `<button class="btn btn-danger" onclick="deleteInventory(${inv.id})">Supprimer l'inventaire</button>`;
+  document.getElementById('main').innerHTML = html;
+}
+
+async function savePeriod(id){
+  const purchases = document.getElementById('f-purchases').value;
+  const sales = document.getElementById('f-sales').value;
+  try{
+    await api('/fc/inventories/' + id, { method:'PUT', body:{ purchases, sales } });
+    await refreshAndRender();
+  }catch(e){ showMessage('Erreur', e.message); }
+}
+async function editInventory(inv){
+  const v = await openForm({ title:'Modifier l’inventaire', fields:[
+      { key:'label', label:'Nom', value:inv.label },
+      { key:'date', label:'Date', type:'date', value:String(inv.inv_date).slice(0,10) }],
+    onSubmit: v => api('/fc/inventories/' + inv.id, { method:'PUT', body:{ label:v.label, invDate:v.date } }) });
+  if(v) refreshAndRender();
+}
+async function closeInventory(id, missing){
+  const msg = (missing ? `${missing} article(s) n'ont pas été comptés : ils seront considérés à 0.\n\n` : '') +
+    'Les prix d’achat actuels seront figés pour cet inventaire.';
+  if(!(await confirmBox('Clôturer l’inventaire ?', msg, 'Clôturer'))) return;
+  await api(`/fc/inventories/${id}/close`, { method:'POST' });
+  refreshAndRender();
+}
+async function reopenInventory(id){
+  if(!(await confirmBox('Rouvrir l’inventaire ?', 'Les quantités redeviennent modifiables et l’inventaire sera valorisé aux prix actuels jusqu’à la prochaine clôture.', 'Rouvrir'))) return;
+  await api(`/fc/inventories/${id}/reopen`, { method:'POST' });
+  refreshAndRender();
+}
+async function deleteInventory(id){
+  if(!(await confirmBox('Supprimer l’inventaire ?', 'Toutes les quantités comptées seront perdues. Action irréversible.', 'Supprimer', true))) return;
+  await api('/fc/inventories/' + id, { method:'DELETE' });
+  inventory = null;
+  goBack();
+}
+
+function exportCsv(id){
+  const inv = data.inventories.find(i => i.id === id);
+  const shelfName = sid => (data.shelves.find(s => s.id === sid) || {}).name || '';
+  const num = n => String(Math.round(n * 1000) / 1000).replace('.', ',');
+  const rows = [['Étagère','Article','Unité','Quantité','Prix achat CHF','Valeur CHF']];
+  const lines = inventoryLines().sort((a,b) => shelfName(a.item.shelf_id).localeCompare(shelfName(b.item.shelf_id)) || a.item.name.localeCompare(b.item.name));
+  lines.forEach(l => rows.push([shelfName(l.item.shelf_id), l.item.name, l.item.unit, num(l.qty), num(l.price), num(l.value)]));
+  rows.push(['','','','','Total', num(inventoryValue())]);
+  const csv = '﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
+  a.download = `${inv.label.replace(/[^\w\- ]+/g,'')} ${inv.inv_date.slice(0,10)}.csv`;
+  a.click();
+}
+
+/* ================= Gerant : articles, prix, etageres ================= */
+function renderCatalog(){
+  setHeader('Articles & prix', 'Prix d’achat en CHF par unité', { label:'+ Étagère', onClick:addShelf });
+  setFooter(null);
+  let html = activeItems().length > 8 ? `<input class="search" placeholder="Rechercher un article…" oninput="filterCatalog(this.value)">` : '';
+  data.shelves.forEach(s => {
+    html += `<div class="shelf-head" data-shelf="${s.id}"><h2>${esc(s.name)}</h2><button onclick="editShelf(${s.id})">Renommer / suppr.</button></div>`;
+    itemsOf(s.id).forEach(it => {
+      html += `<div class="admin-row" data-name="${esc(it.name.toLowerCase())}" onclick="editItem(${it.id})">
+        <div class="info">${esc(it.name)}</div><div class="price">${money(it.price)} <span class="hint" style="font-weight:400">/ ${esc(it.unit)}</span></div></div>`;
+    });
+    html += `<div class="add-line" onclick="editItem(null, ${s.id})">+ Ajouter un article</div>`;
+  });
+  const orphans = activeItems().filter(i => !data.shelves.some(s => s.id === i.shelf_id));
+  if(orphans.length){
+    html += `<div class="shelf-head"><h2>Sans étagère</h2></div>`;
+    orphans.forEach(it => { html += `<div class="admin-row" data-name="${esc(it.name.toLowerCase())}" onclick="editItem(${it.id})"><div class="info">${esc(it.name)}</div><div class="price">${money(it.price)}</div></div>`; });
+  }
+  if(!data.shelves.length) html += `<p class="hint">Créez d'abord une étagère ou une zone (ex. Frigo tacos, Congélateur…).</p>`;
+  document.getElementById('main').innerHTML = html;
+}
+function filterCatalog(q){
+  q = q.trim().toLowerCase();
+  document.querySelectorAll('.admin-row').forEach(r => { r.style.display = !q || r.dataset.name.includes(q) ? '' : 'none'; });
+}
+
+async function addShelf(){
+  const v = await openForm({ title:'Nouvelle étagère / zone', fields:[{ key:'name', label:'Nom', placeholder:'ex. Frigo boissons' }],
+    onSubmit: v => api('/fc/shelves', { method:'POST', body:{ restaurantId, name:v.name } }) });
+  if(v) refreshAndRender();
+}
+async function editShelf(id){
+  const s = data.shelves.find(x => x.id === id);
+  const v = await openForm({ title:'Étagère / zone', fields:[{ key:'name', label:'Nom', value:s.name }],
+    onSubmit: v => api('/fc/shelves/' + id, { method:'PUT', body:{ name:v.name } }),
+    extra:{ label:'Supprimer cette étagère', onClick: async () => {
+      if(!(await confirmBox('Supprimer « ' + s.name + ' » ?', 'L’étagère doit être vide.', 'Supprimer', true))) return;
+      try{ await api('/fc/shelves/' + id, { method:'DELETE' }); }catch(e){ await showMessage('Impossible', e.message); }
+    } } });
+  refreshAndRender();
+  return v;
+}
+
+async function editItem(id, shelfId){
+  const it = id ? data.items.find(i => i.id === id) : null;
+  const v = await openForm({
+    title: it ? 'Modifier l’article' : 'Nouvel article',
+    message: it ? '' : 'Prix d’achat HT ou TTC : restez cohérent avec vos factures fournisseurs.',
+    fields:[
+      { key:'name', label:'Nom de l’article', value: it ? it.name : '', placeholder:'ex. Cumin moulu 1 kg' },
+      { key:'unit', label:'Unité de comptage', value: it ? it.unit : 'pce', list:'units-list', placeholder:'pce, kg, carton…' },
+      { key:'price', label:'Prix d’achat par unité (CHF)', value: it ? String(it.price) : '', inputmode:'decimal', placeholder:'ex. 12.50' },
+      { key:'shelfId', label:'Étagère / zone', type:'select', value: it ? it.shelf_id : shelfId, options: data.shelves.map(s => ({ value:s.id, label:s.name })) }
+    ],
+    submit: it ? 'Enregistrer' : 'Ajouter',
+    onSubmit: v => {
+      const p = parseNum(v.price);
+      if(p === null || Number.isNaN(p) || p < 0) throw new Error('Prix d’achat invalide');
+      const body = { name:v.name, unit:v.unit, price:p, shelfId:Number(v.shelfId) };
+      return it ? api('/fc/items/' + it.id, { method:'PUT', body })
+                : api('/fc/items', { method:'POST', body:Object.assign({ restaurantId }, body) });
+    },
+    extra: it ? { label:'Supprimer cet article', onClick: async () => {
+      if(!(await confirmBox('Supprimer « ' + it.name + ' » ?', 'Les inventaires déjà clôturés le conservent.', 'Supprimer', true))) return;
+      await api('/fc/items/' + it.id, { method:'DELETE' });
+    } } : null
+  });
+  await refreshAndRender();
+  return v;
+}
+
+/* ================= Demarrage ================= */
+(async function init(){
+  try{
+    restaurants = await api('/restaurants');
+    if(!restaurantId || !restaurants.some(r => String(r.id) === String(restaurantId))){
+      if(restaurants.length === 1){ restaurantId = String(restaurants[0].id); lsSet(RESTAURANT_KEY, restaurantId); }
+      else { route = { name:'pickRestaurant' }; render(); return; }
+    }
+    await loadState();
+    render();
+  }catch(e){
+    document.getElementById('main').innerHTML = `<p class="hint">Impossible de joindre le serveur : ${esc(e.message)}</p>`;
+  }
+})();
+</script>
+</body>
+</html>
