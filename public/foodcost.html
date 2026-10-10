@@ -3,133 +3,167 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#1F2A22">
+<meta name="theme-color" content="#F26B1D">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Food cost">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%231F2A22'/%3E%3Ctext x='50' y='64' font-size='40' text-anchor='middle' fill='%23F4C64B' font-family='sans-serif' font-weight='700'%3ECHF%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <title>Food cost</title>
 <style>
   :root{
-    --bg: #EEF0EA;
+    --bg: #FFF6EC;
     --surface: #FFFFFF;
-    --ink: #1F2A22;
-    --muted: #6C766A;
-    --line: #D3D8CC;
-    --fresh: #3E7A54;
-    --fresh-dim: #E4EFE6;
-    --warn: #C1402A;
-    --warn-dim: #F7E2DC;
-    --tape: #F4C64B;
-    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --ink: #2B1D14;
+    --muted: #8A7563;
+    --line: #F0E1D2;
+    --primary: #F26B1D;
+    --primary-dark: #C9520E;
+    --fresh: #18A058;
+    --fresh-dim: #E3F7EC;
+    --warn: #E03E36;
+    --warn-dim: #FDE6E4;
+    --sun: #FFC233;
+    --radius: 16px;
+    font-family: "Nunito", "Segoe UI", system-ui, sans-serif;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body{ margin:0; background:var(--bg); color:var(--ink); }
-  .app{ max-width:620px; margin:0 auto; min-height:100vh; background:var(--surface); border-left:1px solid var(--line); border-right:1px solid var(--line); display:flex; flex-direction:column; }
-  .tab-strip{ display:flex; gap:2px; padding:10px 14px 0 14px; background:var(--bg); border-bottom:1px solid var(--line); }
-  .tab-strip .notch{ width:34px; height:10px; background:var(--tape); border-radius:2px 2px 0 0; }
-  header{ position:sticky; top:0; z-index:20; background:var(--surface); padding:12px 16px 12px 10px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; }
-  header .back{ width:36px; height:36px; border:none; background:none; border-radius:50%; cursor:pointer; color:var(--ink); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-  header .back:active{ background:var(--bg); }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-size:16px; }
+  .app{ max-width:640px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; }
+  .tab-strip{ display:none; }
+  header{ position:sticky; top:0; z-index:20; background:linear-gradient(120deg, #F26B1D 0%, #E8432F 100%); color:#fff; padding:14px 16px 14px 10px; display:flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(232,67,47,.25); border-radius:0 0 22px 22px; }
+  header .back{ width:44px; height:44px; border:none; background:rgba(255,255,255,.2); border-radius:50%; cursor:pointer; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  header .back:active{ background:rgba(255,255,255,.35); }
   header .back[hidden]{ display:none; }
-  header .titles{ flex:1; min-width:0; }
-  header .title{ font-family:"Archivo Narrow","IBM Plex Sans Condensed",sans-serif; font-weight:700; font-size:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  header .sub{ font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  header .head-action{ font-size:12px; color:var(--fresh); font-weight:600; background:none; border:none; cursor:pointer; font-family:inherit; padding:6px 0; white-space:nowrap; }
-  main{ flex:1; padding:16px 16px 110px 16px; }
-  .footer-bar{ position:sticky; bottom:0; background:var(--ink); color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
-  .footer-bar strong{ font-size:18px; font-variant-numeric:tabular-nums; }
+  header .titles{ flex:1; min-width:0; padding-left:4px; }
+  header .title{ font-weight:800; font-size:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header .sub{ font-size:13px; opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header .head-action{ font-size:14px; color:var(--primary-dark); background:#fff; font-weight:800; border:none; cursor:pointer; font-family:inherit; padding:10px 14px; border-radius:999px; white-space:nowrap; }
+  main{ flex:1; padding:18px 16px 120px 16px; }
+  .footer-bar{ position:sticky; bottom:0; margin:0 10px 10px 10px; background:#2B1D14; color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; font-size:15px; border-radius:18px; box-shadow:0 6px 20px rgba(43,29,20,.3); }
+  .footer-bar strong{ font-size:20px; font-variant-numeric:tabular-nums; color:var(--sun); }
   .footer-bar[hidden]{ display:none; }
 
-  h2{ font-family:"Archivo Narrow",sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:22px 0 10px 0; }
+  h2{ font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin:26px 0 12px 0; }
   h2:first-child{ margin-top:4px; }
-  .hint{ color:var(--muted); font-size:13px; line-height:1.45; }
-  .btn{ display:block; width:100%; padding:14px; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; margin-top:8px; }
-  .btn-primary{ background:var(--fresh); color:#fff; }
-  .btn-dark{ background:var(--ink); color:#fff; }
-  .btn-ghost{ background:var(--surface); color:var(--ink); border:1px solid var(--line); }
-  .btn-danger{ background:var(--surface); color:var(--warn); border:1px solid var(--warn); }
-  .btn:disabled{ background:var(--line); color:var(--muted); cursor:not-allowed; }
-  .link{ color:var(--muted); font-size:13px; text-align:center; margin-top:22px; cursor:pointer; background:none; border:none; width:100%; font-family:inherit; padding:8px; }
+  .hint{ color:var(--muted); font-size:14px; line-height:1.5; }
+  .hint a{ color:var(--primary-dark); font-weight:700; }
+  .btn{ display:flex; align-items:center; justify-content:center; gap:10px; width:100%; min-height:60px; padding:16px; border:none; border-radius:var(--radius); font-size:18px; font-weight:800; cursor:pointer; font-family:inherit; margin-top:12px; transition:transform .08s; }
+  .btn:active{ transform:scale(.98); }
+  .btn .ico{ font-size:24px; }
+  .btn-primary{ background:linear-gradient(120deg,#F26B1D,#E8432F); color:#fff; box-shadow:0 6px 16px rgba(232,67,47,.3); }
+  .btn-dark{ background:linear-gradient(120deg,#7C4DFF,#5B3BE0); color:#fff; box-shadow:0 6px 16px rgba(91,59,224,.28); }
+  .btn-ghost{ background:linear-gradient(120deg,#13B5A6,#0E8F84); color:#fff; box-shadow:0 6px 16px rgba(14,143,132,.25); }
+  .btn-light{ background:var(--surface); color:var(--ink); border:2px solid var(--line); }
+  .btn-danger{ background:var(--surface); color:var(--warn); border:2px solid var(--warn-dim); }
+  .btn:disabled{ background:var(--line); color:var(--muted); box-shadow:none; cursor:not-allowed; }
+  .link{ color:var(--muted); font-size:15px; font-weight:700; text-align:center; margin-top:22px; cursor:pointer; background:none; border:none; width:100%; font-family:inherit; padding:12px; }
 
-  .card{ border:1px solid var(--line); border-radius:6px; padding:14px; margin-bottom:10px; background:var(--surface); }
+  .card{ border-radius:var(--radius); padding:16px; margin-bottom:12px; background:var(--surface); box-shadow:0 2px 10px rgba(120,70,30,.08); }
   .card.clickable{ cursor:pointer; }
-  .card.clickable:active{ background:var(--bg); }
+  .card.clickable:active{ transform:scale(.99); }
   .card .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
-  .card .name{ font-weight:600; font-size:15px; }
-  .card .meta{ font-size:12px; color:var(--muted); margin-top:4px; }
-  .card .value{ font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .progress{ height:6px; background:var(--bg); border-radius:3px; overflow:hidden; margin-top:10px; }
-  .progress span{ display:block; height:100%; background:var(--fresh); }
-  .pill{ font-size:11px; border-radius:20px; padding:2px 9px; border:1px solid currentColor; white-space:nowrap; }
-  .pill.open{ color:var(--fresh); }
-  .pill.closed{ color:var(--muted); }
-  .pill.done{ color:#fff; background:var(--fresh); border-color:var(--fresh); }
+  .card .name{ font-weight:800; font-size:17px; }
+  .card .meta{ font-size:13px; color:var(--muted); margin-top:4px; }
+  .card .value{ font-weight:800; font-size:17px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .hero{ background:linear-gradient(135deg,#FFD15C 0%,#FF9F43 100%); color:#2B1D14; }
+  .hero .meta{ color:#5C3B1E; }
+  .progress{ height:10px; background:rgba(0,0,0,.08); border-radius:5px; overflow:hidden; margin-top:12px; }
+  .progress span{ display:block; height:100%; background:var(--fresh); border-radius:5px; transition:width .3s; }
+  .pill{ font-size:12px; font-weight:800; border-radius:999px; padding:4px 11px; white-space:nowrap; }
+  .pill.open{ color:#fff; background:var(--fresh); }
+  .pill.closed{ color:var(--muted); background:var(--line); }
+  .pill.done{ color:#fff; background:var(--fresh); }
 
-  .item-row{ display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--line); }
-  .item-row:last-child{ border-bottom:none; }
-  .item-row .info{ flex:1; min-width:0; }
-  .item-row .iname{ font-size:15px; font-weight:500; }
-  .item-row .imeta{ font-size:12px; color:var(--muted); margin-top:2px; }
-  .item-row.counted .iname::after{ content:" ✓"; color:var(--fresh); font-weight:700; }
-  .qty{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
-  .qty button{ width:40px; height:40px; border-radius:50%; border:1px solid var(--ink); background:var(--surface); font-size:20px; cursor:pointer; line-height:1; color:var(--ink); }
-  .qty button:active{ background:var(--bg); }
-  .qty input{ width:72px; height:42px; text-align:center; font-size:18px; border:1px solid var(--line); border-radius:6px; font-family:inherit; font-variant-numeric:tabular-nums; color:var(--ink); }
-  .qty input:focus{ outline:2px solid var(--fresh); border-color:var(--fresh); }
-  .qty .unit{ font-size:12px; color:var(--muted); width:44px; }
-  .qty-stack{ display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+  /* Tuiles des etageres : couleur + icone par zone */
+  .shelf-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .shelf-tile{ position:relative; border-radius:20px; padding:16px 14px 14px 14px; min-height:150px; cursor:pointer; display:flex; flex-direction:column; color:#2B1D14; box-shadow:0 3px 12px rgba(0,0,0,.08); border:3px solid transparent; }
+  .shelf-tile:active{ transform:scale(.97); }
+  .shelf-tile .emoji{ font-size:40px; line-height:1; }
+  .shelf-tile .sname{ font-weight:800; font-size:17px; margin-top:10px; line-height:1.2; }
+  .shelf-tile .scount{ font-size:13px; font-weight:700; opacity:.75; margin-top:auto; padding-top:8px; }
+  .shelf-tile .progress{ background:rgba(255,255,255,.7); margin-top:6px; }
+  .shelf-tile.done{ border-color:var(--fresh); }
+  .shelf-tile .check{ position:absolute; top:10px; right:10px; width:30px; height:30px; border-radius:50%; background:var(--fresh); color:#fff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:17px; }
+
+  /* Lignes de comptage */
+  .item-row{ display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:14px; margin-bottom:10px; background:var(--surface); border-radius:var(--radius); box-shadow:0 2px 10px rgba(120,70,30,.08); border-left:6px solid var(--line); }
+  .item-row.counted{ background:var(--fresh-dim); border-left-color:var(--fresh); }
+  .item-row .info{ flex:1 1 140px; min-width:0; }
+  .item-row .iname{ font-size:18px; font-weight:800; }
+  .item-row .imeta{ font-size:13px; color:var(--muted); margin-top:3px; }
+  .item-row.counted .iname::after{ content:" ✓"; color:var(--fresh); font-weight:900; }
+  .qty-stack{ display:flex; flex-direction:column; gap:8px; flex-shrink:0; margin-left:auto; }
+  .qty{ display:flex; align-items:center; gap:6px; }
+  .qty button{ width:52px; height:52px; border-radius:50%; border:none; font-size:26px; font-weight:800; cursor:pointer; line-height:1; color:#fff; font-family:inherit; }
+  .qty button.minus{ background:#FF8A7A; }
+  .qty button.plus{ background:var(--fresh); }
+  .qty button.half{ width:44px; height:44px; font-size:17px; background:var(--sun); color:#2B1D14; }
+  .qty button:active{ transform:scale(.92); }
+  .qty input{ width:82px; height:54px; text-align:center; font-size:23px; font-weight:800; border:2px solid var(--line); border-radius:14px; font-family:inherit; font-variant-numeric:tabular-nums; color:var(--ink); background:#fff; }
+  .qty input:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 4px rgba(242,107,29,.18); }
+  .qty .unit{ font-size:13px; font-weight:700; color:var(--muted); width:58px; overflow:hidden; text-overflow:ellipsis; }
   .item-row.readonly .qty input{ background:var(--bg); }
-  .save-state{ font-size:11px; color:var(--muted); text-align:right; height:14px; margin-bottom:4px; }
+  .save-state{ font-size:13px; font-weight:700; color:var(--fresh); text-align:right; height:18px; margin-bottom:6px; }
   .save-state.err{ color:var(--warn); }
 
-  .admin-row{ display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--line); cursor:pointer; }
-  .admin-row .info{ flex:1; min-width:0; }
-  .admin-row .price{ font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
-  .add-line{ padding:12px 2px; color:var(--fresh); font-size:13px; font-weight:600; cursor:pointer; border-top:1px dashed var(--line); }
-  .shelf-head{ display:flex; align-items:center; justify-content:space-between; margin:22px 0 4px 0; }
+  .admin-row{ display:flex; align-items:center; gap:10px; padding:14px; margin-bottom:8px; background:var(--surface); border-radius:14px; cursor:pointer; box-shadow:0 1px 6px rgba(120,70,30,.07); }
+  .admin-row .info{ flex:1; min-width:0; font-weight:700; }
+  .admin-row .price{ font-variant-numeric:tabular-nums; font-weight:800; white-space:nowrap; text-align:right; }
+  .add-line{ padding:14px; color:var(--primary-dark); font-size:16px; font-weight:800; cursor:pointer; border:2px dashed #F5C9A8; border-radius:14px; text-align:center; margin-top:6px; }
+  .shelf-head{ display:flex; align-items:center; justify-content:space-between; margin:26px 0 10px 0; }
   .shelf-head h2{ margin:0; }
-  .shelf-head button{ background:none; border:none; color:var(--fresh); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .shelf-head button{ background:#FFE8D6; border:none; color:var(--primary-dark); font-size:13px; font-weight:800; cursor:pointer; font-family:inherit; padding:8px 12px; border-radius:999px; }
+  .type-dot{ display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:8px; vertical-align:middle; }
 
-  table.calc{ width:100%; border-collapse:collapse; font-size:14px; }
-  table.calc td{ padding:9px 2px; border-bottom:1px solid var(--line); }
-  table.calc td:last-child{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  table.calc tr.total td{ font-weight:700; border-bottom:2px solid var(--ink); }
-  .big-result{ text-align:center; padding:18px; border-radius:6px; background:var(--fresh-dim); margin:14px 0; }
-  .big-result .pct{ font-family:"Archivo Narrow",sans-serif; font-size:42px; font-weight:700; color:var(--fresh); }
-  .big-result.high{ background:var(--warn-dim); }
-  .big-result.high .pct{ color:var(--warn); }
-  .big-result .lbl{ font-size:12px; color:var(--muted); }
+  /* Totaux par type : barres colorees */
+  .type-bars{ background:var(--surface); border-radius:var(--radius); padding:16px; box-shadow:0 2px 10px rgba(120,70,30,.08); }
+  .type-bar{ margin-bottom:14px; }
+  .type-bar .tb-head{ display:flex; justify-content:space-between; gap:10px; font-weight:800; font-size:15px; }
+  .type-bar .tb-head span:last-child{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .type-bar .tb-track{ height:12px; background:var(--bg); border-radius:6px; margin-top:6px; overflow:hidden; }
+  .type-bar .tb-track span{ display:block; height:100%; border-radius:6px; }
+  .type-total{ display:flex; justify-content:space-between; font-weight:900; font-size:19px; border-top:2px dashed var(--line); padding-top:12px; }
 
-  .field{ margin-bottom:14px; }
-  .field label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
-  .field input, .field select{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:6px; font-size:15px; font-family:inherit; color:var(--ink); background:var(--surface); }
+  table.calc{ width:100%; border-collapse:collapse; font-size:15px; background:var(--surface); border-radius:var(--radius); overflow:hidden; box-shadow:0 2px 10px rgba(120,70,30,.08); }
+  table.calc td{ padding:12px 14px; border-bottom:1px solid var(--line); }
+  table.calc td:last-child{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:700; }
+  table.calc tr.total td{ font-weight:900; background:#FFF1E2; }
+  .big-result{ text-align:center; padding:22px; border-radius:20px; background:linear-gradient(135deg,#3DDC84,#18A058); color:#fff; margin:16px 0; box-shadow:0 6px 18px rgba(24,160,88,.3); }
+  .big-result .pct{ font-size:52px; font-weight:900; }
+  .big-result.high{ background:linear-gradient(135deg,#FF7A6B,#E03E36); box-shadow:0 6px 18px rgba(224,62,54,.3); }
+  .big-result .lbl{ font-size:14px; font-weight:700; opacity:.95; }
 
-  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:260px; margin:0 auto; }
-  .keypad button{ padding:16px 0; font-size:18px; border:1px solid var(--line); background:var(--surface); border-radius:6px; cursor:pointer; font-family:inherit; color:var(--ink); }
-  .keypad button:active{ background:var(--bg); }
-  .pin-dots{ display:flex; gap:14px; justify-content:center; margin:18px 0 22px 0; }
-  .pin-dots span{ width:14px; height:14px; border-radius:50%; border:2px solid var(--ink); }
-  .pin-dots span.filled{ background:var(--ink); }
-  .pin-dots.error span{ border-color:var(--warn); }
+  .field{ margin-bottom:16px; }
+  .field label{ font-size:14px; font-weight:700; color:var(--muted); display:block; margin-bottom:6px; }
+  .field input, .field select{ width:100%; padding:14px; border:2px solid var(--line); border-radius:12px; font-size:17px; font-family:inherit; color:var(--ink); background:var(--surface); }
+  .field input:focus, .field select:focus{ outline:none; border-color:var(--primary); }
+
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:300px; margin:0 auto; }
+  .keypad button{ height:68px; font-size:26px; font-weight:800; border:none; background:var(--surface); border-radius:18px; cursor:pointer; font-family:inherit; color:var(--ink); box-shadow:0 2px 8px rgba(120,70,30,.1); }
+  .keypad button:active{ background:#FFE8D6; }
+  .pin-dots{ display:flex; gap:16px; justify-content:center; margin:20px 0 26px 0; }
+  .pin-dots span{ width:18px; height:18px; border-radius:50%; border:3px solid var(--primary); }
+  .pin-dots span.filled{ background:var(--primary); }
+  .pin-dots.error span{ border-color:var(--warn); background:var(--warn-dim); }
   .center{ text-align:center; }
-  .lock-title{ font-family:"Archivo Narrow",sans-serif; font-size:22px; font-weight:700; margin:30px 0 6px 0; text-align:center; }
+  .lock-title{ font-size:26px; font-weight:900; margin:30px 0 6px 0; text-align:center; }
 
-  #modal{ display:none; position:fixed; inset:0; background:rgba(31,42,34,.55); z-index:50; align-items:center; justify-content:center; padding:16px; }
+  #modal{ display:none; position:fixed; inset:0; background:rgba(43,29,20,.55); z-index:50; align-items:flex-end; justify-content:center; padding:12px; }
   #modal.open{ display:flex; }
-  .modal-box{ background:var(--surface); border-radius:8px; padding:20px; width:100%; max-width:380px; max-height:90vh; overflow-y:auto; }
-  .modal-box .m-title{ font-size:16px; font-weight:600; margin-bottom:8px; }
-  .modal-box .m-msg{ font-size:13px; color:var(--muted); white-space:pre-line; margin-bottom:14px; }
-  .modal-box .m-err{ font-size:12px; color:var(--warn); min-height:16px; margin-bottom:6px; }
-  .modal-box .m-btns{ display:flex; gap:8px; }
-  .modal-box .m-btns button{ flex:1; padding:12px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; border:1px solid var(--line); background:var(--surface); color:var(--ink); }
-  .modal-box .m-btns button.primary{ background:var(--fresh); color:#fff; border-color:var(--fresh); }
-  .modal-box .m-btns button.danger{ background:var(--warn); color:#fff; border-color:var(--warn); }
+  @media (min-width:600px){ #modal{ align-items:center; } }
+  .modal-box{ background:var(--surface); border-radius:24px; padding:22px; width:100%; max-width:440px; max-height:92vh; overflow-y:auto; }
+  .modal-box .m-title{ font-size:20px; font-weight:900; margin-bottom:8px; }
+  .modal-box .m-msg{ font-size:15px; color:var(--muted); white-space:pre-line; margin-bottom:16px; }
+  .modal-box .m-err{ font-size:14px; font-weight:700; color:var(--warn); min-height:18px; margin-bottom:8px; }
+  .modal-box .m-btns{ display:flex; gap:10px; }
+  .modal-box .m-btns button{ flex:1; min-height:56px; border-radius:14px; font-size:17px; font-weight:800; cursor:pointer; font-family:inherit; border:2px solid var(--line); background:var(--surface); color:var(--ink); }
+  .modal-box .m-btns button.primary{ background:linear-gradient(120deg,#F26B1D,#E8432F); color:#fff; border:none; }
+  .modal-box .m-btns button.danger{ background:var(--warn); color:#fff; border:none; }
 
-  .tabs{ display:flex; border-bottom:1px solid var(--line); margin:-16px -16px 16px -16px; background:var(--surface); }
-  .tabs button{ flex:1; padding:13px 4px; border:none; background:none; font-family:inherit; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:3px solid transparent; }
-  .tabs button.active{ color:var(--ink); border-bottom-color:var(--tape); }
-  .search{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:6px; font-size:15px; font-family:inherit; margin-bottom:6px; }
+  .search{ width:100%; padding:14px 16px; border:2px solid var(--line); border-radius:14px; font-size:17px; font-family:inherit; margin-bottom:12px; background:var(--surface); }
+  .search:focus{ outline:none; border-color:var(--primary); }
 </style>
 </head>
 <body>
@@ -241,6 +275,21 @@ function typeTotals(){
   });
   return other.value ? rows.concat(other) : rows;
 }
+// Couleur + icone de chaque zone, devinees depuis son nom.
+const SHELF_COLORS = ['#FFE3C2','#D9F2FF','#E6DEFF','#D8F5E1','#FFE0EA','#FFF1B8','#DDF0F7','#F3E3D3'];
+const SHELF_ICONS = [[/[ée]pice/i,'🌶️'],[/boisson|drink/i,'🥤'],[/taco/i,'🌮'],[/shawarma|kebab|d[öo]ner/i,'🥙'],
+  [/cong[ée]l/i,'❄️'],[/chambre froide|froid/i,'🧊'],[/frigo/i,'🧊'],[/garage|stock|r[ée]serve|cave/i,'📦'],
+  [/l[ée]gume|fruit/i,'🥬'],[/pain|boulang/i,'🥖'],[/sauce/i,'🥫'],[/nettoy|hygi/i,'🧽'],[/emball/i,'🥡']];
+function shelfLook(shelf){
+  const idx = data.shelves.indexOf(shelf);
+  const icon = (SHELF_ICONS.find(([re]) => re.test(shelf.name)) || [null,'🗄️'])[1];
+  return { icon, color: SHELF_COLORS[(idx < 0 ? 0 : idx) % SHELF_COLORS.length] };
+}
+const TYPE_COLORS = ['#18A058','#F26B1D','#2F80ED','#9B51E0','#E0457B','#F2C94C'];
+function typeColor(id){
+  const idx = data.types.findIndex(t => t.id === id);
+  return idx < 0 ? '#B8A898' : TYPE_COLORS[idx % TYPE_COLORS.length];
+}
 function typeName(id){ const t = data.types.find(t => t.id === id); return t ? t.name : 'Sans type'; }
 function inventoryValue(){ return inventoryLines().reduce((s,l) => s + l.value, 0); }
 
@@ -342,23 +391,23 @@ function renderHome(){
   if(open){
     const total = activeItems().length;
     const pct = total ? Math.round(open.counted / total * 100) : 0;
-    html += `<div class="card clickable" onclick="startCounting(${open.id})">
-      <div class="row"><div><div class="name">${esc(open.label)}</div><div class="meta">${isoToFr(open.inv_date)} · ${open.counted} / ${total} articles comptés</div></div>
-      ${isManager ? `<div class="value">${money(open.total)}</div>` : ''}</div>
+    html += `<div class="card clickable hero" onclick="startCounting(${open.id})">
+      <div class="row"><div><div class="name">📋 ${esc(open.label)}</div><div class="meta">${isoToFr(open.inv_date)} · ${open.counted} / ${total} articles comptés</div></div>
+      ${isManager ? `<div class="value">${money(open.total)}</div>` : `<div class="value">${pct} %</div>`}</div>
       <div class="progress"><span style="width:${pct}%"></span></div></div>
-      <button class="btn btn-primary" onclick="startCounting(${open.id})">Compter le stock</button>`;
+      <button class="btn btn-primary" onclick="startCounting(${open.id})"><span class="ico">✍️</span> Compter le stock</button>`;
   } else {
     html += `<p class="hint">Aucun inventaire en cours.${isManager ? '' : ' Le gérant doit en ouvrir un (début ou fin de mois).'}</p>`;
-    if(isManager) html += `<button class="btn btn-primary" onclick="newInventory()">Nouvel inventaire</button>`;
+    if(isManager) html += `<button class="btn btn-primary" onclick="newInventory()"><span class="ico">➕</span> Nouvel inventaire</button>`;
   }
 
   if(isManager){
     html += `<h2>Gestion</h2>
-      <button class="btn btn-dark" onclick="go('inventories')">Inventaires & calcul du food cost</button>
-      <button class="btn btn-ghost" onclick="go('catalog')">Articles, prix & étagères</button>
+      <button class="btn btn-dark" onclick="go('inventories')"><span class="ico">📊</span> Inventaires & food cost</button>
+      <button class="btn btn-ghost" onclick="go('catalog')"><span class="ico">🏷️</span> Articles, prix & étagères</button>
       <button class="link" onclick="isManager=false;render()">Quitter le mode gérant</button>`;
   } else {
-    html += `<button class="link" onclick="go('pin')">Accès gérant</button>`;
+    html += `<button class="link" onclick="go('pin')">🔒 Accès gérant</button>`;
   }
   html += `<p class="hint center" style="margin-top:18px;font-size:12px;">
     ${name ? `Compté par : <b>${esc(name)}</b> · <a href="#" onclick="askName();return false;">changer</a>` : ''}
@@ -425,15 +474,19 @@ function renderShelves(){
   setHeader(inventory.label, isoToFr(inventory.inv_date) + (inventory.status === 'closed' ? ' · clôturé' : ' · choisir une étagère / zone'));
   let html = '';
   if(inventory.status === 'closed') html += `<p class="hint">Cet inventaire est clôturé : lecture seule.</p>`;
+  html += `<div class="shelf-grid">`;
   data.shelves.forEach(s => {
     const total = itemsOf(s.id).length;
     const n = counted(s.id);
     const done = total > 0 && n === total;
-    html += `<div class="card clickable" onclick="go('count',{shelfId:${s.id}})">
-      <div class="row"><div><div class="name">${esc(s.name)}</div><div class="meta">${n} / ${total} comptés</div></div>
-      <div style="text-align:right">${done ? '<span class="pill done">Terminé</span>' : ''}</div></div>
+    const look = shelfLook(s);
+    html += `<div class="shelf-tile ${done?'done':''}" style="background:${look.color}" onclick="go('count',{shelfId:${s.id}})">
+      ${done ? '<div class="check">✓</div>' : ''}
+      <div class="emoji">${look.icon}</div><div class="sname">${esc(s.name)}</div>
+      <div class="scount">${n} / ${total} comptés</div>
       <div class="progress"><span style="width:${total ? n/total*100 : 0}%"></span></div></div>`;
   });
+  html += `</div>`;
   if(!data.shelves.length) html += `<p class="hint">Aucune étagère. Le gérant doit les créer dans « Articles, prix & étagères ».</p>`;
   document.getElementById('main').innerHTML = html;
   const all = activeItems().length, n = activeItems().filter(i => inventory.countMap[i.id]).length;
@@ -448,7 +501,7 @@ function renderCount(){
   const shelf = data.shelves.find(s => s.id === route.shelfId);
   if(!shelf){ goBack(); return; }
   const readonly = inventory.status !== 'open';
-  setHeader(shelf.name, inventory.label);
+  setHeader(shelfLook(shelf).icon + ' ' + shelf.name, inventory.label);
   const items = itemsOf(shelf.id);
   let html = `<div class="save-state" id="save-state"></div>`;
   if(items.length > 8) html += `<input class="search" placeholder="Rechercher un article…" oninput="filterRows(this.value)">`;
@@ -456,9 +509,10 @@ function renderCount(){
   items.forEach(it => {
     const c = inventory.countMap[it.id];
     const qtyLine = (field, value, unit) => `<div class="qty">
-        ${readonly ? '' : `<button onclick="stepQty(${it.id},'${field}',-1)" aria-label="Moins">−</button>`}
+        ${readonly ? '' : `<button class="minus" onclick="stepQty(${it.id},'${field}',-1)" aria-label="Moins">−</button>`}
         <input id="${field}-${it.id}" inputmode="decimal" value="${value === null || value === undefined ? '' : qtyStr(value)}" placeholder="—" ${readonly?'readonly':''} oninput="onQtyInput(${it.id})" onfocus="this.select()">
-        ${readonly ? '' : `<button onclick="stepQty(${it.id},'${field}',1)" aria-label="Plus">+</button>`}
+        ${readonly ? '' : `<button class="plus" onclick="stepQty(${it.id},'${field}',1)" aria-label="Plus">+</button>`}
+        ${readonly || field !== 'q' ? '' : `<button class="half" onclick="stepQty(${it.id},'q',0.5)" aria-label="Ajouter une demie">½</button>`}
         <span class="unit">${esc(unit)}</span></div>`;
     const ratioNote = it.unit2 ? `<div class="imeta">1 ${esc(it.unit)} = ${qtyStr(lineRatio(it))} ${esc(it.unit2)}</div>` : '';
     html += `<div class="item-row ${c?'counted':''} ${readonly?'readonly':''}" data-id="${it.id}" data-name="${esc(it.name.toLowerCase())}">
@@ -469,7 +523,7 @@ function renderCount(){
   html += `</div>`;
   if(!items.length) html += `<p class="hint">Aucun article sur cette étagère.${isManager ? '' : ' Le gérant doit les ajouter.'}</p>`;
   if(isManager && !readonly) html += `<div class="add-line" onclick="editItem(null, ${shelf.id}, true)">+ Ajouter un article ici</div>`;
-  if(!readonly && items.length) html += `<p class="hint" style="margin-top:14px">Les virgules sont acceptées : tapez par ex. 1,5 ou 3,2.<br>Deux lignes = cartons fermés en haut, marchandise entamée (kg…) en bas.<br>Laisser vide = pas encore compté. Mettre 0 si l'article est en rupture.</p>`;
+  if(!readonly && items.length) html += `<p class="hint" style="margin-top:14px">Les virgules sont acceptées : tapez par ex. 1,5 ou 3,2. Le bouton <b>½</b> ajoute une demi-unité (boîte ou carton entamé).<br>Deux lignes = emballages fermés en haut, marchandise entamée pesée (kg…) en bas.<br>Laisser vide = pas encore compté. Mettre 0 si l'article est en rupture.</p>`;
   document.getElementById('main').innerHTML = html;
   updateCountFooter(shelf.id);
 }
@@ -571,10 +625,15 @@ function renderInvDetail(){
   const p = periodFor(inv);
 
   let html = `<h2>Stock par type de marchandise</h2>`;
-  html += `<button class="btn btn-primary" onclick="go('shelves')">${open ? 'Compter / voir par étagère' : 'Voir le détail par étagère'}</button>`;
-  html += `<table class="calc" style="margin-top:12px">`;
-  typeTotals().forEach(t => { html += `<tr><td>${esc(t.name)}</td><td>${money(t.value)}</td></tr>`; });
-  html += `<tr class="total"><td>Total stock</td><td>${money(inv.total)}</td></tr></table>`;
+  html += `<button class="btn btn-primary" onclick="go('shelves')"><span class="ico">${open ? '✍️' : '👀'}</span> ${open ? 'Compter / voir par étagère' : 'Voir le détail par étagère'}</button>`;
+  const totals = typeTotals();
+  const maxV = Math.max(1, ...totals.map(t => t.value));
+  html += `<div class="type-bars" style="margin-top:14px">`;
+  totals.forEach(t => {
+    html += `<div class="type-bar"><div class="tb-head"><span><span class="type-dot" style="background:${typeColor(t.id)}"></span>${esc(t.name)}</span><span>${money(t.value)}</span></div>
+      <div class="tb-track"><span style="width:${t.value / maxV * 100}%;background:${typeColor(t.id)}"></span></div></div>`;
+  });
+  html += `<div class="type-total"><span>Total stock</span><span>${money(inv.total)}</span></div></div>`;
 
   html += `<h2>Food cost de la période</h2>`;
   html += `<div class="field"><label>Achats de marchandises de la période (CHF, factures fournisseurs)</label>
@@ -598,14 +657,14 @@ function renderInvDetail(){
   }
 
   html += `<h2>Actions</h2>`;
-  html += `<button class="btn btn-ghost" onclick="exportCsv(${inv.id})">Exporter en CSV (Excel)</button>`;
+  html += `<button class="btn btn-ghost" onclick="exportCsv(${inv.id})"><span class="ico">📥</span> Exporter pour Excel</button>`;
   if(open){
     const missing = activeItems().filter(i => !inventory.countMap[i.id]).length;
-    html += `<button class="btn btn-dark" onclick="closeInventory(${inv.id}, ${missing})">Clôturer l'inventaire</button>`;
+    html += `<button class="btn btn-dark" onclick="closeInventory(${inv.id}, ${missing})"><span class="ico">🔒</span> Clôturer l'inventaire</button>`;
   } else {
-    html += `<button class="btn btn-ghost" onclick="reopenInventory(${inv.id})">Rouvrir pour corriger</button>`;
+    html += `<button class="btn btn-light" onclick="reopenInventory(${inv.id})"><span class="ico">🔓</span> Rouvrir pour corriger</button>`;
   }
-  html += `<button class="btn btn-danger" onclick="deleteInventory(${inv.id})">Supprimer l'inventaire</button>`;
+  html += `<button class="btn btn-danger" onclick="deleteInventory(${inv.id})"><span class="ico">🗑️</span> Supprimer l'inventaire</button>`;
   document.getElementById('main').innerHTML = html;
 }
 
@@ -668,14 +727,14 @@ function renderCatalog(){
   let html = `<div class="shelf-head" style="margin-top:4px"><h2>Types de marchandise</h2><button onclick="addType()">+ Type</button></div>`;
   data.types.forEach(t => {
     const n = activeItems().filter(i => i.type_id === t.id).length;
-    html += `<div class="admin-row" onclick="editType(${t.id})"><div class="info">${esc(t.name)}</div><div class="hint">${n} article(s)</div></div>`;
+    html += `<div class="admin-row" onclick="editType(${t.id})"><div class="info"><span class="type-dot" style="background:${typeColor(t.id)}"></span>${esc(t.name)}</div><div class="hint">${n} article(s)</div></div>`;
   });
   html += activeItems().length > 8 ? `<input class="search" style="margin-top:18px" placeholder="Rechercher un article…" oninput="filterCatalog(this.value)">` : '';
   data.shelves.forEach(s => {
-    html += `<div class="shelf-head" data-shelf="${s.id}"><h2>${esc(s.name)}</h2><button onclick="editShelf(${s.id})">Renommer / suppr.</button></div>`;
+    html += `<div class="shelf-head" data-shelf="${s.id}"><h2>${shelfLook(s).icon} ${esc(s.name)}</h2><button onclick="editShelf(${s.id})">Renommer / suppr.</button></div>`;
     itemsOf(s.id).forEach(it => {
       html += `<div class="admin-row" data-name="${esc(it.name.toLowerCase())}" onclick="editItem(${it.id})">
-        <div class="info">${esc(it.name)}<div class="hint" style="font-size:11px">${esc(typeName(it.type_id))}</div></div><div class="price">${money(it.price)} <span class="hint" style="font-weight:400">/ ${esc(it.unit)}${it.unit2 ? ` · 1 = ${qtyStr(it.unit2_per_unit)} ${esc(it.unit2)}` : ''}</span></div></div>`;
+        <div class="info">${esc(it.name)}<div class="hint" style="font-size:12px"><span class="type-dot" style="background:${typeColor(it.type_id)};width:9px;height:9px"></span>${esc(typeName(it.type_id))}</div></div><div class="price">${money(it.price)} <span class="hint" style="font-weight:400">/ ${esc(it.unit)}${it.unit2 ? ` · 1 = ${qtyStr(it.unit2_per_unit)} ${esc(it.unit2)}` : ''}</span></div></div>`;
     });
     html += `<div class="add-line" onclick="editItem(null, ${s.id})">+ Ajouter un article</div>`;
   });
@@ -735,7 +794,7 @@ async function editItem(id, shelfId){
       { key:'unit', label:'Unité principale (celle de la facture)', value: it ? it.unit : 'pce', list:'units-list', placeholder:'pce, kg, carton…' },
       { key:'price', label:'Prix d’achat par unité principale (CHF)', value: it ? String(it.price) : '', inputmode:'decimal', placeholder:'ex. 12.50' },
       { key:'unit2', label:'2e unité pour la marchandise entamée (facultatif)', value: it && it.unit2 ? it.unit2 : '', list:'units-list', placeholder:'ex. kg — laisser vide si inutile' },
-      { key:'ratio', label:'Contenance : combien de cette 2e unité dans 1 unité principale ?', value: it && it.unit2_per_unit ? String(it.unit2_per_unit) : '', inputmode:'decimal', placeholder:'ex. 10 (1 carton = 10 kg)' },
+      { key:'ratio', label:'Contenance : combien de cette 2e unité dans 1 unité principale ?', value: it && it.unit2_per_unit ? String(it.unit2_per_unit) : '', inputmode:'decimal', placeholder:'ex. 10 (carton de poulet = 10 kg) ou 2,5 (boîte de maïs = 2,5 kg)' },
       { key:'typeId', label:'Type de marchandise', type:'select', value: it ? it.type_id : (data.types[0] || {}).id, options: data.types.map(t => ({ value:t.id, label:t.name })) },
       { key:'shelfId', label:'Étagère / zone', type:'select', value: it ? it.shelf_id : shelfId, options: data.shelves.map(s => ({ value:s.id, label:s.name })) }
     ],
