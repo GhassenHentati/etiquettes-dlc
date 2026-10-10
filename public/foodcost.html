@@ -78,6 +78,7 @@
   .qty input{ width:72px; height:42px; text-align:center; font-size:18px; border:1px solid var(--line); border-radius:6px; font-family:inherit; font-variant-numeric:tabular-nums; color:var(--ink); }
   .qty input:focus{ outline:2px solid var(--fresh); border-color:var(--fresh); }
   .qty .unit{ font-size:12px; color:var(--muted); width:44px; }
+  .qty-stack{ display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
   .item-row.readonly .qty input{ background:var(--bg); }
   .save-state{ font-size:11px; color:var(--muted); text-align:right; height:14px; margin-bottom:4px; }
   .save-state.err{ color:var(--warn); }
@@ -210,13 +211,24 @@ function linePrice(item){
   const c = inventory && inventory.countMap[item.id];
   return c && c.unit_price !== null ? c.unit_price : item.price;
 }
+// Contenance (unites 2 par unite principale), figee a la cloture.
+function lineRatio(item){
+  const c = inventory && inventory.countMap[item.id];
+  return c && c.unit2_per_unit ? c.unit2_per_unit : item.unit2_per_unit;
+}
+// Valeur d'une ligne : cartons entiers + kg entames convertis au prorata
+// du prix du carton (ex. 3 kg a 10 kg/carton = 0.3 carton).
+function lineValue(item, c){
+  if(!c) return 0;
+  const ratio = lineRatio(item);
+  return linePrice(item) * ((c.qty || 0) + (c.qty2 && ratio ? c.qty2 / ratio : 0));
+}
 function inventoryLines(){
   return data.items
     .filter(it => inventory.countMap[it.id])
     .map(it => {
       const c = inventory.countMap[it.id];
-      const price = linePrice(it);
-      return { item:it, qty:c.qty, price, value:c.qty * price };
+      return { item:it, qty:c.qty, qty2:c.qty2, price:linePrice(it), value:lineValue(it, c) };
     });
 }
 // Totaux par type de marchandise (le gerant ne veut pas de total par zone).
@@ -443,21 +455,21 @@ function renderCount(){
   html += `<div id="rows">`;
   items.forEach(it => {
     const c = inventory.countMap[it.id];
-    const val = c ? qtyStr(c.qty) : '';
+    const qtyLine = (field, value, unit) => `<div class="qty">
+        ${readonly ? '' : `<button onclick="stepQty(${it.id},'${field}',-1)" aria-label="Moins">−</button>`}
+        <input id="${field}-${it.id}" inputmode="decimal" value="${value === null || value === undefined ? '' : qtyStr(value)}" placeholder="—" ${readonly?'readonly':''} oninput="onQtyInput(${it.id})" onfocus="this.select()">
+        ${readonly ? '' : `<button onclick="stepQty(${it.id},'${field}',1)" aria-label="Plus">+</button>`}
+        <span class="unit">${esc(unit)}</span></div>`;
+    const ratioNote = it.unit2 ? `<div class="imeta">1 ${esc(it.unit)} = ${qtyStr(lineRatio(it))} ${esc(it.unit2)}</div>` : '';
     html += `<div class="item-row ${c?'counted':''} ${readonly?'readonly':''}" data-id="${it.id}" data-name="${esc(it.name.toLowerCase())}">
-      <div class="info"><div class="iname">${esc(it.name)}</div>
-        ${isManager ? `<div class="imeta">${money(linePrice(it))} / ${esc(it.unit)}<span id="lv-${it.id}">${c ? ' · ' + money(c.qty * linePrice(it)) : ''}</span></div>` : ''}</div>
-      <div class="qty">
-        ${readonly ? '' : `<button onclick="stepQty(${it.id},-1)" aria-label="Moins">−</button>`}
-        <input id="q-${it.id}" inputmode="decimal" value="${val}" placeholder="—" ${readonly?'readonly':''} oninput="onQtyInput(${it.id})" onfocus="this.select()">
-        ${readonly ? '' : `<button onclick="stepQty(${it.id},1)" aria-label="Plus">+</button>`}
-        <span class="unit">${esc(it.unit)}</span>
-      </div></div>`;
+      <div class="info"><div class="iname">${esc(it.name)}</div>${ratioNote}
+        ${isManager ? `<div class="imeta">${money(linePrice(it))} / ${esc(it.unit)}<span id="lv-${it.id}">${c ? ' · ' + money(lineValue(it, c)) : ''}</span></div>` : ''}</div>
+      <div class="qty-stack">${qtyLine('q', c && c.qty, it.unit)}${it.unit2 ? qtyLine('q2', c && c.qty2, it.unit2) : ''}</div></div>`;
   });
   html += `</div>`;
   if(!items.length) html += `<p class="hint">Aucun article sur cette étagère.${isManager ? '' : ' Le gérant doit les ajouter.'}</p>`;
   if(isManager && !readonly) html += `<div class="add-line" onclick="editItem(null, ${shelf.id}, true)">+ Ajouter un article ici</div>`;
-  if(!readonly && items.length) html += `<p class="hint" style="margin-top:14px">Laisser vide = pas encore compté. Mettre 0 si l'article est en rupture.</p>`;
+  if(!readonly && items.length) html += `<p class="hint" style="margin-top:14px">Les virgules sont acceptées : tapez par ex. 1,5 ou 3,2.<br>Deux lignes = cartons fermés en haut, marchandise entamée (kg…) en bas.<br>Laisser vide = pas encore compté. Mettre 0 si l'article est en rupture.</p>`;
   document.getElementById('main').innerHTML = html;
   updateCountFooter(shelf.id);
 }
@@ -469,8 +481,8 @@ function updateCountFooter(shelfId){
   const items = itemsOf(shelfId), n = items.filter(i => inventory.countMap[i.id]).length;
   setFooter(`<span>Comptés</span><strong>${n} / ${items.length}</strong>`);
 }
-function stepQty(itemId, delta){
-  const input = document.getElementById('q-' + itemId);
+function stepQty(itemId, field, delta){
+  const input = document.getElementById(field + '-' + itemId);
   const cur = parseNum(input.value);
   const next = Math.max(0, (Number.isFinite(cur) ? cur : 0) + delta);
   input.value = qtyStr(next);
@@ -483,19 +495,22 @@ function onQtyInput(itemId){
 async function saveQty(itemId){
   const input = document.getElementById('q-' + itemId);
   if(!input) return;
+  const input2 = document.getElementById('q2-' + itemId);
   const state = document.getElementById('save-state');
   const n = parseNum(input.value);
-  if(Number.isNaN(n) || n < 0){ state.textContent = 'Quantité invalide'; state.className = 'save-state err'; return; }
+  const n2 = input2 ? parseNum(input2.value) : null;
+  if(Number.isNaN(n) || n < 0 || Number.isNaN(n2) || n2 < 0){ state.textContent = 'Quantité invalide'; state.className = 'save-state err'; return; }
+  const empty = n === null && n2 === null;
   state.textContent = 'Enregistrement…'; state.className = 'save-state';
   try{
-    await api(`/fc/inventories/${inventory.id}/counts/${itemId}`, { method:'PUT', body:{ qty: n === null ? '' : n, countedBy: lsGet(NAME_KEY) } });
-    if(n === null) delete inventory.countMap[itemId];
-    else inventory.countMap[itemId] = Object.assign(inventory.countMap[itemId] || { unit_price:null }, { item_id:itemId, qty:n });
+    await api(`/fc/inventories/${inventory.id}/counts/${itemId}`, { method:'PUT', body:{ qty: n === null ? '' : n, qty2: n2 === null ? '' : n2, countedBy: lsGet(NAME_KEY) } });
+    if(empty) delete inventory.countMap[itemId];
+    else inventory.countMap[itemId] = Object.assign(inventory.countMap[itemId] || { unit_price:null, unit2_per_unit:null }, { item_id:itemId, qty:n, qty2:n2 });
     state.textContent = 'Enregistré ✓';
-    const row = input.closest('.item-row'); row.classList.toggle('counted', n !== null);
+    const row = input.closest('.item-row'); row.classList.toggle('counted', !empty);
     const item = data.items.find(i => i.id === itemId);
     const lv = document.getElementById('lv-' + itemId);
-    if(lv) lv.textContent = n !== null ? ' · ' + money(n * linePrice(item)) : '';
+    if(lv) lv.textContent = empty ? '' : ' · ' + money(lineValue(item, inventory.countMap[itemId]));
     updateCountFooter(item.shelf_id);
   }catch(e){
     state.textContent = 'Non enregistré : ' + e.message; state.className = 'save-state err';
@@ -632,12 +647,13 @@ function exportCsv(id){
   const inv = data.inventories.find(i => i.id === id);
   const shelfName = sid => (data.shelves.find(s => s.id === sid) || {}).name || '';
   const num = n => String(Math.round(n * 1000) / 1000).replace('.', ',');
-  const rows = [['Type','Étagère','Article','Unité','Quantité','Prix achat CHF','Valeur CHF']];
+  const rows = [['Type','Étagère','Article','Unité','Quantité','Entamé','Unité entamé','Prix achat CHF','Valeur CHF']];
   const lines = inventoryLines().sort((a,b) => typeName(a.item.type_id).localeCompare(typeName(b.item.type_id)) || shelfName(a.item.shelf_id).localeCompare(shelfName(b.item.shelf_id)) || a.item.name.localeCompare(b.item.name));
-  lines.forEach(l => rows.push([typeName(l.item.type_id), shelfName(l.item.shelf_id), l.item.name, l.item.unit, num(l.qty), num(l.price), num(l.value)]));
+  const opt = n => n === null || n === undefined ? '' : num(n);
+  lines.forEach(l => rows.push([typeName(l.item.type_id), shelfName(l.item.shelf_id), l.item.name, l.item.unit, opt(l.qty), opt(l.qty2), l.qty2 !== null && l.qty2 !== undefined ? l.item.unit2 || '' : '', num(l.price), num(l.value)]));
   rows.push([]);
-  typeTotals().forEach(t => rows.push(['','','','','','Total ' + t.name, num(t.value)]));
-  rows.push(['','','','','','Total stock', num(inventoryValue())]);
+  typeTotals().forEach(t => rows.push(['','','','','','','','Total ' + t.name, num(t.value)]));
+  rows.push(['','','','','','','','Total stock', num(inventoryValue())]);
   const csv = '﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
@@ -659,7 +675,7 @@ function renderCatalog(){
     html += `<div class="shelf-head" data-shelf="${s.id}"><h2>${esc(s.name)}</h2><button onclick="editShelf(${s.id})">Renommer / suppr.</button></div>`;
     itemsOf(s.id).forEach(it => {
       html += `<div class="admin-row" data-name="${esc(it.name.toLowerCase())}" onclick="editItem(${it.id})">
-        <div class="info">${esc(it.name)}<div class="hint" style="font-size:11px">${esc(typeName(it.type_id))}</div></div><div class="price">${money(it.price)} <span class="hint" style="font-weight:400">/ ${esc(it.unit)}</span></div></div>`;
+        <div class="info">${esc(it.name)}<div class="hint" style="font-size:11px">${esc(typeName(it.type_id))}</div></div><div class="price">${money(it.price)} <span class="hint" style="font-weight:400">/ ${esc(it.unit)}${it.unit2 ? ` · 1 = ${qtyStr(it.unit2_per_unit)} ${esc(it.unit2)}` : ''}</span></div></div>`;
     });
     html += `<div class="add-line" onclick="editItem(null, ${s.id})">+ Ajouter un article</div>`;
   });
@@ -716,8 +732,10 @@ async function editItem(id, shelfId){
     message: it ? '' : 'Prix d’achat HT ou TTC : restez cohérent avec vos factures fournisseurs.',
     fields:[
       { key:'name', label:'Nom de l’article', value: it ? it.name : '', placeholder:'ex. Cumin moulu 1 kg' },
-      { key:'unit', label:'Unité de comptage', value: it ? it.unit : 'pce', list:'units-list', placeholder:'pce, kg, carton…' },
-      { key:'price', label:'Prix d’achat par unité (CHF)', value: it ? String(it.price) : '', inputmode:'decimal', placeholder:'ex. 12.50' },
+      { key:'unit', label:'Unité principale (celle de la facture)', value: it ? it.unit : 'pce', list:'units-list', placeholder:'pce, kg, carton…' },
+      { key:'price', label:'Prix d’achat par unité principale (CHF)', value: it ? String(it.price) : '', inputmode:'decimal', placeholder:'ex. 12.50' },
+      { key:'unit2', label:'2e unité pour la marchandise entamée (facultatif)', value: it && it.unit2 ? it.unit2 : '', list:'units-list', placeholder:'ex. kg — laisser vide si inutile' },
+      { key:'ratio', label:'Contenance : combien de cette 2e unité dans 1 unité principale ?', value: it && it.unit2_per_unit ? String(it.unit2_per_unit) : '', inputmode:'decimal', placeholder:'ex. 10 (1 carton = 10 kg)' },
       { key:'typeId', label:'Type de marchandise', type:'select', value: it ? it.type_id : (data.types[0] || {}).id, options: data.types.map(t => ({ value:t.id, label:t.name })) },
       { key:'shelfId', label:'Étagère / zone', type:'select', value: it ? it.shelf_id : shelfId, options: data.shelves.map(s => ({ value:s.id, label:s.name })) }
     ],
@@ -725,7 +743,7 @@ async function editItem(id, shelfId){
     onSubmit: v => {
       const p = parseNum(v.price);
       if(p === null || Number.isNaN(p) || p < 0) throw new Error('Prix d’achat invalide');
-      const body = { name:v.name, unit:v.unit, price:p, shelfId:Number(v.shelfId), typeId:Number(v.typeId) || null };
+      const body = { name:v.name, unit:v.unit, price:p, shelfId:Number(v.shelfId), typeId:Number(v.typeId) || null, unit2:v.unit2, unit2PerUnit:v.ratio };
       return it ? api('/fc/items/' + it.id, { method:'PUT', body })
                 : api('/fc/items', { method:'POST', body:Object.assign({ restaurantId }, body) });
     },

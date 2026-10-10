@@ -133,6 +133,16 @@ async function initDb() {
     );
     ALTER TABLE fc_items ADD COLUMN IF NOT EXISTS type_id INTEGER REFERENCES fc_types(id) ON DELETE SET NULL;
 
+    -- Deuxieme unite facultative pour la marchandise entamee : un carton de
+    -- poulet (unite principale, prix du carton) peut aussi se compter en kg
+    -- une fois deballe. unit2_per_unit = nombre d'unites 2 dans une unite
+    -- principale (ex. 10 kg par carton) ; le prix au kg en decoule.
+    ALTER TABLE fc_items ADD COLUMN IF NOT EXISTS unit2 TEXT;
+    ALTER TABLE fc_items ADD COLUMN IF NOT EXISTS unit2_per_unit NUMERIC(12,4);
+    ALTER TABLE fc_counts ADD COLUMN IF NOT EXISTS qty2 NUMERIC(12,3);
+    ALTER TABLE fc_counts ADD COLUMN IF NOT EXISTS unit2_per_unit NUMERIC(12,4);
+    ALTER TABLE fc_counts ALTER COLUMN qty DROP NOT NULL;
+
     -- Un inventaire = un comptage a une date. Achats et chiffre d'affaires
     -- concernent la periode qui se termine a cet inventaire.
     CREATE TABLE IF NOT EXISTS fc_inventories (

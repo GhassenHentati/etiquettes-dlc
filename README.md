@@ -51,6 +51,10 @@ Code : `foodcost.js` (API `/api/fc/...`).
   nettoyage, vaisselle & autres (modifiables). Chaque article a un type ; la
   valeur du stock est totalisée par type (pas par zone, les zones servent
   seulement à organiser le comptage).
+- **Quantités** : décimales acceptées (1,5 ou 3,2). Un article peut avoir une
+  2e unité facultative pour la marchandise entamée, avec sa contenance
+  (ex. 1 carton de poulet = 10 kg) : l'employé compte les cartons fermés et les
+  kg déballés, le prix au kg est déduit du prix du carton.
 - Export CSV (séparateur `;`, ouvre directement dans Excel), avec sous-totaux
   par type.
 

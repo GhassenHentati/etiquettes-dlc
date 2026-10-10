@@ -96,10 +96,19 @@ async function seedTypesOnce(restaurantId) {
   );
 }
 
+// Valeur d'une ligne : unites principales + unites 2 converties au prorata
+// (ex. 3 kg de poulet a 10 kg/carton = 0.3 carton). Prix et contenance figes
+// a la cloture, sinon ceux actuels de l'article.
+const LINE_VALUE_SQL = `
+  COALESCE(c.unit_price, i.price) * (
+    COALESCE(c.qty, 0)
+    + COALESCE(c.qty2 / NULLIF(COALESCE(c.unit2_per_unit, i.unit2_per_unit), 0), 0)
+  )`;
+
 // Valeur d'un inventaire : prix fige si cloture, sinon prix actuel de l'article.
 const INVENTORY_TOTALS_SQL = `
   SELECT inv.id, inv.label, inv.inv_date::text AS inv_date, inv.status, inv.purchases, inv.sales, inv.closed_at,
-         COALESCE(SUM(c.qty * COALESCE(c.unit_price, i.price)), 0)::float AS total,
+         COALESCE(SUM(${LINE_VALUE_SQL}), 0)::float AS total,
          COUNT(c.item_id)::int AS counted
   FROM fc_inventories inv
   LEFT JOIN fc_counts c ON c.inventory_id = inv.id
@@ -127,7 +136,8 @@ router.get('/state', wrap(async (req, res) => {
       [restaurantId]
     ),
     pool.query(
-      `SELECT id, shelf_id, type_id, name, unit, price::float AS price, archived, position
+      `SELECT id, shelf_id, type_id, name, unit, price::float AS price,
+              unit2, unit2_per_unit::float AS unit2_per_unit, archived, position
        FROM fc_items WHERE restaurant_id = $1 ORDER BY position, name, id`,
       [restaurantId]
     ),
@@ -229,6 +239,18 @@ function readItemBody(body) {
   }
   if (body.shelfId !== undefined) out.shelf_id = body.shelfId || null;
   if (body.typeId !== undefined) out.type_id = body.typeId || null;
+  if (body.unit2 !== undefined || body.unit2PerUnit !== undefined) {
+    const unit2 = (body.unit2 || '').trim();
+    const ratio = parseNumber(body.unit2PerUnit);
+    if (!unit2) {
+      out.unit2 = null; out.unit2_per_unit = null;
+    } else {
+      if (ratio === null || Number.isNaN(ratio) || ratio <= 0) {
+        return { error: `Indiquez combien de ${unit2} contient une unité principale` };
+      }
+      out.unit2 = unit2; out.unit2_per_unit = ratio;
+    }
+  }
   return { fields: out };
 }
 
@@ -240,11 +262,12 @@ router.post('/items', wrap(async (req, res) => {
   const { error, fields } = readItemBody(body);
   if (error) return res.status(400).json({ error });
   const { rows } = await pool.query(
-    `INSERT INTO fc_items (restaurant_id, shelf_id, type_id, name, unit, price, position)
-     VALUES ($1, $2, $3, $4, $5, $6,
+    `INSERT INTO fc_items (restaurant_id, shelf_id, type_id, name, unit, price, unit2, unit2_per_unit, position)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
        (SELECT COALESCE(MAX(position), -1) + 1 FROM fc_items WHERE shelf_id = $2))
      RETURNING id`,
-    [body.restaurantId, fields.shelf_id, fields.type_id || null, fields.name, fields.unit || 'pce', fields.price || 0]
+    [body.restaurantId, fields.shelf_id, fields.type_id || null, fields.name, fields.unit || 'pce',
+     fields.price || 0, fields.unit2 || null, fields.unit2_per_unit || null]
   );
   res.json({ id: rows[0].id });
 }));
@@ -307,7 +330,8 @@ router.get('/inventories/:id', wrap(async (req, res) => {
   );
   if (!inv.rows.length) return res.status(404).json({ error: 'Inventaire introuvable' });
   const counts = await pool.query(
-    `SELECT item_id, qty::float AS qty, unit_price::float AS unit_price, counted_by, updated_at
+    `SELECT item_id, qty::float AS qty, qty2::float AS qty2, unit_price::float AS unit_price,
+            unit2_per_unit::float AS unit2_per_unit, counted_by, updated_at
      FROM fc_counts WHERE inventory_id = $1`,
     [req.params.id]
   );
@@ -345,29 +369,33 @@ router.delete('/inventories/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// Saisie d'une quantite par l'employe. qty vide = "pas encore compte".
+// Saisie d'une quantite par l'employe : qty en unite principale (cartons),
+// qty2 en unite 2 (kg entames). Les deux vides = "pas encore compte".
 router.put('/inventories/:id/counts/:itemId', wrap(async (req, res) => {
-  const { qty, countedBy } = req.body || {};
+  const { qty, qty2, countedBy } = req.body || {};
   const inv = await pool.query('SELECT status FROM fc_inventories WHERE id = $1', [req.params.id]);
   if (!inv.rows.length) return res.status(404).json({ error: 'Inventaire introuvable' });
   if (inv.rows[0].status !== 'open') return res.status(400).json({ error: 'Inventaire clôturé' });
 
   const n = parseNumber(qty);
-  if (n === null) {
+  const n2 = parseNumber(qty2);
+  if (n === null && n2 === null) {
     await pool.query(
       'DELETE FROM fc_counts WHERE inventory_id = $1 AND item_id = $2',
       [req.params.id, req.params.itemId]
     );
     return res.json({ ok: true });
   }
-  if (Number.isNaN(n) || n < 0) return res.status(400).json({ error: 'Quantité invalide' });
+  if (Number.isNaN(n) || n < 0 || Number.isNaN(n2) || n2 < 0) {
+    return res.status(400).json({ error: 'Quantité invalide' });
+  }
 
   await pool.query(
-    `INSERT INTO fc_counts (inventory_id, item_id, qty, counted_by, updated_at)
-     VALUES ($1, $2, $3, $4, now())
+    `INSERT INTO fc_counts (inventory_id, item_id, qty, qty2, counted_by, updated_at)
+     VALUES ($1, $2, $3, $4, $5, now())
      ON CONFLICT (inventory_id, item_id)
-     DO UPDATE SET qty = EXCLUDED.qty, counted_by = EXCLUDED.counted_by, updated_at = now()`,
-    [req.params.id, req.params.itemId, n, countedBy || null]
+     DO UPDATE SET qty = EXCLUDED.qty, qty2 = EXCLUDED.qty2, counted_by = EXCLUDED.counted_by, updated_at = now()`,
+    [req.params.id, req.params.itemId, n, n2, countedBy || null]
   );
   res.json({ ok: true });
 }));
@@ -379,7 +407,7 @@ router.post('/inventories/:id/close', wrap(async (req, res) => {
   try {
     await client.query('BEGIN');
     await client.query(
-      `UPDATE fc_counts c SET unit_price = i.price
+      `UPDATE fc_counts c SET unit_price = i.price, unit2_per_unit = i.unit2_per_unit
        FROM fc_items i WHERE i.id = c.item_id AND c.inventory_id = $1`,
       [req.params.id]
     );
@@ -398,7 +426,7 @@ router.post('/inventories/:id/close', wrap(async (req, res) => {
 }));
 
 router.post('/inventories/:id/reopen', wrap(async (req, res) => {
-  await pool.query('UPDATE fc_counts SET unit_price = NULL WHERE inventory_id = $1', [req.params.id]);
+  await pool.query('UPDATE fc_counts SET unit_price = NULL, unit2_per_unit = NULL WHERE inventory_id = $1', [req.params.id]);
   await pool.query(
     `UPDATE fc_inventories SET status = 'open', closed_at = NULL WHERE id = $1`,
     [req.params.id]
