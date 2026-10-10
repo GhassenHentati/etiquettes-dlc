@@ -64,6 +64,38 @@ async function seedShelvesOnce(restaurantId) {
   }
 }
 
+const DEFAULT_TYPES = [
+  'Matières premières',
+  'Emballages',
+  'Produits nettoyage, vaisselle & autres'
+];
+
+// Types par defaut, une seule fois par restaurant. Les articles crees avant
+// l'existence des types sont ranges dans le premier (matieres premieres).
+async function seedTypesOnce(restaurantId) {
+  const { rowCount } = await pool.query(
+    `INSERT INTO settings (key, value) VALUES ($1, '1') ON CONFLICT (key) DO NOTHING`,
+    [`fc_types_seeded_${restaurantId}`]
+  );
+  if (!rowCount) return;
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM fc_types WHERE restaurant_id = $1', [restaurantId]
+  );
+  if (rows[0].n > 0) return;
+  let firstId = null;
+  for (let i = 0; i < DEFAULT_TYPES.length; i++) {
+    const r = await pool.query(
+      'INSERT INTO fc_types (restaurant_id, name, position) VALUES ($1, $2, $3) RETURNING id',
+      [restaurantId, DEFAULT_TYPES[i], i]
+    );
+    if (i === 0) firstId = r.rows[0].id;
+  }
+  await pool.query(
+    'UPDATE fc_items SET type_id = $1 WHERE restaurant_id = $2 AND type_id IS NULL',
+    [firstId, restaurantId]
+  );
+}
+
 // Valeur d'un inventaire : prix fige si cloture, sinon prix actuel de l'article.
 const INVENTORY_TOTALS_SQL = `
   SELECT inv.id, inv.label, inv.inv_date::text AS inv_date, inv.status, inv.purchases, inv.sales, inv.closed_at,
@@ -83,14 +115,19 @@ router.get('/state', wrap(async (req, res) => {
   const restaurantId = requireRestaurantId(req, res);
   if (!restaurantId) return;
   await seedShelvesOnce(restaurantId);
+  await seedTypesOnce(restaurantId);
 
-  const [shelves, items, inventories] = await Promise.all([
+  const [shelves, types, items, inventories] = await Promise.all([
     pool.query(
       'SELECT id, name, position FROM fc_shelves WHERE restaurant_id = $1 ORDER BY position, id',
       [restaurantId]
     ),
     pool.query(
-      `SELECT id, shelf_id, name, unit, price::float AS price, archived, position
+      'SELECT id, name, position FROM fc_types WHERE restaurant_id = $1 ORDER BY position, id',
+      [restaurantId]
+    ),
+    pool.query(
+      `SELECT id, shelf_id, type_id, name, unit, price::float AS price, archived, position
        FROM fc_items WHERE restaurant_id = $1 ORDER BY position, name, id`,
       [restaurantId]
     ),
@@ -99,6 +136,7 @@ router.get('/state', wrap(async (req, res) => {
 
   res.json({
     shelves: shelves.rows,
+    types: types.rows,
     items: items.rows,
     inventories: inventories.rows.map(r => Object.assign(r, {
       purchases: r.purchases === null ? null : Number(r.purchases),
@@ -141,6 +179,40 @@ router.delete('/shelves/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ---------- Types de marchandise ----------
+
+router.post('/types', wrap(async (req, res) => {
+  const { name, restaurantId } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Nom requis' });
+  if (!restaurantId) return res.status(400).json({ error: 'Restaurant requis' });
+  const { rows } = await pool.query(
+    `INSERT INTO fc_types (restaurant_id, name, position)
+     VALUES ($1, $2, (SELECT COALESCE(MAX(position), -1) + 1 FROM fc_types WHERE restaurant_id = $1))
+     RETURNING id, name, position`,
+    [restaurantId, name.trim()]
+  );
+  res.json(rows[0]);
+}));
+
+router.put('/types/:id', wrap(async (req, res) => {
+  const { name } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Nom requis' });
+  await pool.query('UPDATE fc_types SET name = $1 WHERE id = $2', [name.trim(), req.params.id]);
+  res.json({ ok: true });
+}));
+
+router.delete('/types/:id', wrap(async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM fc_items WHERE type_id = $1 AND NOT archived',
+    [req.params.id]
+  );
+  if (rows[0].n > 0) {
+    return res.status(400).json({ error: `${rows[0].n} article(s) ont encore ce type. Changez-leur de type d'abord.` });
+  }
+  await pool.query('DELETE FROM fc_types WHERE id = $1', [req.params.id]);
+  res.json({ ok: true });
+}));
+
 // ---------- Articles ----------
 
 function readItemBody(body) {
@@ -156,6 +228,7 @@ function readItemBody(body) {
     out.price = price;
   }
   if (body.shelfId !== undefined) out.shelf_id = body.shelfId || null;
+  if (body.typeId !== undefined) out.type_id = body.typeId || null;
   return { fields: out };
 }
 
@@ -167,11 +240,11 @@ router.post('/items', wrap(async (req, res) => {
   const { error, fields } = readItemBody(body);
   if (error) return res.status(400).json({ error });
   const { rows } = await pool.query(
-    `INSERT INTO fc_items (restaurant_id, shelf_id, name, unit, price, position)
-     VALUES ($1, $2, $3, $4, $5,
+    `INSERT INTO fc_items (restaurant_id, shelf_id, type_id, name, unit, price, position)
+     VALUES ($1, $2, $3, $4, $5, $6,
        (SELECT COALESCE(MAX(position), -1) + 1 FROM fc_items WHERE shelf_id = $2))
      RETURNING id`,
-    [body.restaurantId, fields.shelf_id, fields.name, fields.unit || 'pce', fields.price || 0]
+    [body.restaurantId, fields.shelf_id, fields.type_id || null, fields.name, fields.unit || 'pce', fields.price || 0]
   );
   res.json({ id: rows[0].id });
 }));

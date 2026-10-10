@@ -122,6 +122,17 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
+    -- Type de marchandise (matieres premieres, emballages...) : c'est par
+    -- type, et non par etagere, que le gerant veut les totaux.
+    CREATE TABLE IF NOT EXISTS fc_types (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    ALTER TABLE fc_items ADD COLUMN IF NOT EXISTS type_id INTEGER REFERENCES fc_types(id) ON DELETE SET NULL;
+
     -- Un inventaire = un comptage a une date. Achats et chiffre d'affaires
     -- concernent la periode qui se termine a cet inventaire.
     CREATE TABLE IF NOT EXISTS fc_inventories (

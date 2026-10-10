@@ -161,7 +161,7 @@ const UNITS = ['pce', 'kg', 'g', 'L', 'bouteille', 'canette', 'carton', 'sac', '
 let restaurantId = lsGet(RESTAURANT_KEY);
 let restaurants = [];
 let isManager = false;          // gerant : voit et modifie les prix
-let data = { shelves:[], items:[], inventories:[] };
+let data = { shelves:[], types:[], items:[], inventories:[] };
 let inventory = null;           // inventaire ouvert a l'ecran (avec counts)
 let route = { name:'home' };
 let stack = [];
@@ -219,9 +219,17 @@ function inventoryLines(){
       return { item:it, qty:c.qty, price, value:c.qty * price };
     });
 }
-function shelfValue(shelfId){
-  return inventoryLines().filter(l => l.item.shelf_id === shelfId).reduce((s,l) => s + l.value, 0);
+// Totaux par type de marchandise (le gerant ne veut pas de total par zone).
+function typeTotals(){
+  const rows = data.types.map(t => ({ id:t.id, name:t.name, value:0 }));
+  const other = { id:null, name:'Sans type', value:0 };
+  inventoryLines().forEach(l => {
+    const r = rows.find(x => x.id === l.item.type_id) || other;
+    r.value += l.value;
+  });
+  return other.value ? rows.concat(other) : rows;
 }
+function typeName(id){ const t = data.types.find(t => t.id === id); return t ? t.name : 'Sans type'; }
 function inventoryValue(){ return inventoryLines().reduce((s,l) => s + l.value, 0); }
 
 /* ================= Navigation ================= */
@@ -411,7 +419,7 @@ function renderShelves(){
     const done = total > 0 && n === total;
     html += `<div class="card clickable" onclick="go('count',{shelfId:${s.id}})">
       <div class="row"><div><div class="name">${esc(s.name)}</div><div class="meta">${n} / ${total} comptés</div></div>
-      <div style="text-align:right">${isManager ? `<div class="value">${money(shelfValue(s.id))}</div>` : ''}${done ? '<span class="pill done">Terminé</span>' : ''}</div></div>
+      <div style="text-align:right">${done ? '<span class="pill done">Terminé</span>' : ''}</div></div>
       <div class="progress"><span style="width:${total ? n/total*100 : 0}%"></span></div></div>`;
   });
   if(!data.shelves.length) html += `<p class="hint">Aucune étagère. Le gérant doit les créer dans « Articles, prix & étagères ».</p>`;
@@ -459,9 +467,7 @@ function filterRows(q){
 }
 function updateCountFooter(shelfId){
   const items = itemsOf(shelfId), n = items.filter(i => inventory.countMap[i.id]).length;
-  setFooter(isManager
-    ? `<span>${n} / ${items.length} comptés</span><span>Étagère <strong>${money(shelfValue(shelfId))}</strong></span>`
-    : `<span>Comptés</span><strong>${n} / ${items.length}</strong>`);
+  setFooter(`<span>Comptés</span><strong>${n} / ${items.length}</strong>`);
 }
 function stepQty(itemId, delta){
   const input = document.getElementById('q-' + itemId);
@@ -549,12 +555,10 @@ function renderInvDetail(){
   setFooter(`<span>Valeur du stock</span><strong>${money(inv.total)}</strong>`);
   const p = periodFor(inv);
 
-  let html = `<h2>Stock</h2>`;
+  let html = `<h2>Stock par type de marchandise</h2>`;
   html += `<button class="btn btn-primary" onclick="go('shelves')">${open ? 'Compter / voir par étagère' : 'Voir le détail par étagère'}</button>`;
   html += `<table class="calc" style="margin-top:12px">`;
-  data.shelves.forEach(s => { html += `<tr><td>${esc(s.name)}</td><td>${money(shelfValue(s.id))}</td></tr>`; });
-  const orphan = inventoryLines().filter(l => !data.shelves.some(s => s.id === l.item.shelf_id)).reduce((s,l) => s + l.value, 0);
-  if(orphan) html += `<tr><td>Sans étagère / archivés</td><td>${money(orphan)}</td></tr>`;
+  typeTotals().forEach(t => { html += `<tr><td>${esc(t.name)}</td><td>${money(t.value)}</td></tr>`; });
   html += `<tr class="total"><td>Total stock</td><td>${money(inv.total)}</td></tr></table>`;
 
   html += `<h2>Food cost de la période</h2>`;
@@ -628,10 +632,12 @@ function exportCsv(id){
   const inv = data.inventories.find(i => i.id === id);
   const shelfName = sid => (data.shelves.find(s => s.id === sid) || {}).name || '';
   const num = n => String(Math.round(n * 1000) / 1000).replace('.', ',');
-  const rows = [['Étagère','Article','Unité','Quantité','Prix achat CHF','Valeur CHF']];
-  const lines = inventoryLines().sort((a,b) => shelfName(a.item.shelf_id).localeCompare(shelfName(b.item.shelf_id)) || a.item.name.localeCompare(b.item.name));
-  lines.forEach(l => rows.push([shelfName(l.item.shelf_id), l.item.name, l.item.unit, num(l.qty), num(l.price), num(l.value)]));
-  rows.push(['','','','','Total', num(inventoryValue())]);
+  const rows = [['Type','Étagère','Article','Unité','Quantité','Prix achat CHF','Valeur CHF']];
+  const lines = inventoryLines().sort((a,b) => typeName(a.item.type_id).localeCompare(typeName(b.item.type_id)) || shelfName(a.item.shelf_id).localeCompare(shelfName(b.item.shelf_id)) || a.item.name.localeCompare(b.item.name));
+  lines.forEach(l => rows.push([typeName(l.item.type_id), shelfName(l.item.shelf_id), l.item.name, l.item.unit, num(l.qty), num(l.price), num(l.value)]));
+  rows.push([]);
+  typeTotals().forEach(t => rows.push(['','','','','','Total ' + t.name, num(t.value)]));
+  rows.push(['','','','','','Total stock', num(inventoryValue())]);
   const csv = '﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
@@ -643,12 +649,17 @@ function exportCsv(id){
 function renderCatalog(){
   setHeader('Articles & prix', 'Prix d’achat en CHF par unité', { label:'+ Étagère', onClick:addShelf });
   setFooter(null);
-  let html = activeItems().length > 8 ? `<input class="search" placeholder="Rechercher un article…" oninput="filterCatalog(this.value)">` : '';
+  let html = `<div class="shelf-head" style="margin-top:4px"><h2>Types de marchandise</h2><button onclick="addType()">+ Type</button></div>`;
+  data.types.forEach(t => {
+    const n = activeItems().filter(i => i.type_id === t.id).length;
+    html += `<div class="admin-row" onclick="editType(${t.id})"><div class="info">${esc(t.name)}</div><div class="hint">${n} article(s)</div></div>`;
+  });
+  html += activeItems().length > 8 ? `<input class="search" style="margin-top:18px" placeholder="Rechercher un article…" oninput="filterCatalog(this.value)">` : '';
   data.shelves.forEach(s => {
     html += `<div class="shelf-head" data-shelf="${s.id}"><h2>${esc(s.name)}</h2><button onclick="editShelf(${s.id})">Renommer / suppr.</button></div>`;
     itemsOf(s.id).forEach(it => {
       html += `<div class="admin-row" data-name="${esc(it.name.toLowerCase())}" onclick="editItem(${it.id})">
-        <div class="info">${esc(it.name)}</div><div class="price">${money(it.price)} <span class="hint" style="font-weight:400">/ ${esc(it.unit)}</span></div></div>`;
+        <div class="info">${esc(it.name)}<div class="hint" style="font-size:11px">${esc(typeName(it.type_id))}</div></div><div class="price">${money(it.price)} <span class="hint" style="font-weight:400">/ ${esc(it.unit)}</span></div></div>`;
     });
     html += `<div class="add-line" onclick="editItem(null, ${s.id})">+ Ajouter un article</div>`;
   });
@@ -663,6 +674,22 @@ function renderCatalog(){
 function filterCatalog(q){
   q = q.trim().toLowerCase();
   document.querySelectorAll('.admin-row').forEach(r => { r.style.display = !q || r.dataset.name.includes(q) ? '' : 'none'; });
+}
+
+async function addType(){
+  const v = await openForm({ title:'Nouveau type de marchandise', fields:[{ key:'name', label:'Nom', placeholder:'ex. Boissons' }],
+    onSubmit: v => api('/fc/types', { method:'POST', body:{ restaurantId, name:v.name } }) });
+  if(v) refreshAndRender();
+}
+async function editType(id){
+  const t = data.types.find(x => x.id === id);
+  await openForm({ title:'Type de marchandise', fields:[{ key:'name', label:'Nom', value:t.name }],
+    onSubmit: v => api('/fc/types/' + id, { method:'PUT', body:{ name:v.name } }),
+    extra:{ label:'Supprimer ce type', onClick: async () => {
+      if(!(await confirmBox('Supprimer « ' + t.name + ' » ?', 'Aucun article ne doit avoir ce type.', 'Supprimer', true))) return;
+      try{ await api('/fc/types/' + id, { method:'DELETE' }); }catch(e){ await showMessage('Impossible', e.message); }
+    } } });
+  refreshAndRender();
 }
 
 async function addShelf(){
@@ -691,13 +718,14 @@ async function editItem(id, shelfId){
       { key:'name', label:'Nom de l’article', value: it ? it.name : '', placeholder:'ex. Cumin moulu 1 kg' },
       { key:'unit', label:'Unité de comptage', value: it ? it.unit : 'pce', list:'units-list', placeholder:'pce, kg, carton…' },
       { key:'price', label:'Prix d’achat par unité (CHF)', value: it ? String(it.price) : '', inputmode:'decimal', placeholder:'ex. 12.50' },
+      { key:'typeId', label:'Type de marchandise', type:'select', value: it ? it.type_id : (data.types[0] || {}).id, options: data.types.map(t => ({ value:t.id, label:t.name })) },
       { key:'shelfId', label:'Étagère / zone', type:'select', value: it ? it.shelf_id : shelfId, options: data.shelves.map(s => ({ value:s.id, label:s.name })) }
     ],
     submit: it ? 'Enregistrer' : 'Ajouter',
     onSubmit: v => {
       const p = parseNum(v.price);
       if(p === null || Number.isNaN(p) || p < 0) throw new Error('Prix d’achat invalide');
-      const body = { name:v.name, unit:v.unit, price:p, shelfId:Number(v.shelfId) };
+      const body = { name:v.name, unit:v.unit, price:p, shelfId:Number(v.shelfId), typeId:Number(v.typeId) || null };
       return it ? api('/fc/items/' + it.id, { method:'PUT', body })
                 : api('/fc/items', { method:'POST', body:Object.assign({ restaurantId }, body) });
     },

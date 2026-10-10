@@ -47,7 +47,12 @@ Code : `foodcost.js` (API `/api/fc/...`).
   modifie plus la valeur d'un inventaire passé.
 - **Food cost** d'une période = stock début (inventaire clôturé précédent)
   + achats − stock fin, divisé par le chiffre d'affaires.
-- Export CSV (séparateur `;`, ouvre directement dans Excel).
+- **Types de marchandise** : Matières premières, Emballages, Produits
+  nettoyage, vaisselle & autres (modifiables). Chaque article a un type ; la
+  valeur du stock est totalisée par type (pas par zone, les zones servent
+  seulement à organiser le comptage).
+- Export CSV (séparateur `;`, ouvre directement dans Excel), avec sous-totaux
+  par type.
 
 ## Déploiement sur Render
 
