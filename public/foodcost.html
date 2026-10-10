@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#E6EBEE">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Food cost">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%231F2A22'/%3E%3Ctext x='50' y='64' font-size='40' text-anchor='middle' fill='%23F4C64B' font-family='sans-serif' font-weight='700'%3ECHF%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Food cost</title>
+<style>
+  /* Meme langage visuel que l'app « Mise en place » : gris doux, cartes
+     blanches, Barlow, une seule touche de couleur discrete par zone. */
+  :root{
+    --bg:#E6EBEE; --surface:#FFFFFF; --surface-2:#F1F4F6;
+    --ink:#16212A; --ink-2:#55636E; --ink-3:#8593A0; --line:#D2DAE0;
+    --action:#16212A; --action-ink:#FFFFFF;
+    --ok:#2B8A57; --ok-soft:#E3F1E9; --warn:#C2410C; --warn-soft:#FBE8DA; --focus:#3D6FB6;
+    --font-d:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+    --font-b:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-b); font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased; }
+  button{ font-family:inherit; }
+  :focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+  .app{ max-width:760px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; }
+  .tab-strip{ display:none; }
+  header{ display:flex; align-items:center; gap:10px; padding:16px 16px 6px 16px; }
+  header .back{ display:inline-flex; align-items:center; gap:6px; border:0; background:var(--action); color:var(--action-ink); border-radius:14px; padding:0 16px 0 10px; min-height:52px; font-weight:700; font-size:17px; cursor:pointer; flex-shrink:0; }
+  header .back::after{ content:"Retour"; }
+  header .back[hidden]{ display:none; }
+  header .titles{ flex:1; min-width:0; }
+  header .title{ font-family:var(--font-d); font-weight:700; font-size:28px; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header .sub{ font-size:13.5px; color:var(--ink-2); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header .head-action{ border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:12px; padding:0 14px; min-height:46px; font-weight:600; font-size:15px; cursor:pointer; white-space:nowrap; }
+  main{ flex:1; padding:12px 16px 120px 16px; }
+  .footer-bar{ position:sticky; bottom:0; margin:0 12px 12px 12px; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; font-size:15px; font-weight:600; color:var(--ink-2); box-shadow:0 12px 30px -12px rgba(0,0,0,.35); }
+  .footer-bar strong{ font-family:var(--font-d); font-size:26px; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .footer-bar[hidden]{ display:none; }
+
+  h2{ font-family:var(--font-d); font-size:24px; font-weight:700; margin:24px 0 10px 0; color:var(--ink); }
+  h2:first-child{ margin-top:4px; }
+  .hint{ color:var(--ink-2); font-size:15px; }
+  .hint a{ color:var(--ink); font-weight:600; }
+  .btn{ display:flex; align-items:center; justify-content:center; width:100%; min-height:60px; padding:14px 18px; border:1px solid var(--line); border-radius:14px; font-size:18px; font-weight:700; cursor:pointer; margin-top:10px; background:var(--surface); color:var(--ink); }
+  .btn:active{ transform:scale(.99); }
+  .btn .ico{ display:none; }
+  .btn-primary, .btn-dark{ background:var(--action); color:var(--action-ink); border-color:var(--action); }
+  .btn-ghost, .btn-light{ background:var(--surface); color:var(--ink); }
+  .btn-danger{ background:var(--surface); color:var(--warn); border-color:var(--warn-soft); }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .link{ border:0; background:none; color:var(--ink-2); font-weight:600; font-size:15px; padding:12px; margin-top:16px; width:100%; cursor:pointer; }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin-bottom:10px; }
+  .card.clickable{ cursor:pointer; }
+  .card.clickable:active{ transform:scale(.995); }
+  .card .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .card .name{ font-family:var(--font-d); font-weight:700; font-size:26px; line-height:1.05; }
+  .card .meta{ font-size:14.5px; color:var(--ink-2); margin-top:4px; }
+  .card .value{ font-family:var(--font-d); font-weight:700; font-size:26px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .progress{ height:10px; background:var(--surface-2); border-radius:5px; overflow:hidden; margin-top:12px; }
+  .progress span{ display:block; height:100%; background:var(--ok); border-radius:5px; transition:width .3s; }
+  .pill{ font-weight:700; font-size:13.5px; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .pill.open{ background:var(--ok-soft); color:var(--ok); }
+  .pill.closed{ background:var(--surface-2); color:var(--ink-2); }
+  .pill.done{ background:var(--ok-soft); color:var(--ok); }
+
+  /* Zones : teinte tres legere de la couleur de zone */
+  .shelf-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+  .shelf-tile{ position:relative; display:flex; flex-direction:column; gap:6px; min-height:130px; padding:14px; border-radius:16px; cursor:pointer; border:2px solid color-mix(in srgb,var(--z) 45%,var(--line)); background:color-mix(in srgb,var(--z) 9%,var(--surface)); }
+  .shelf-tile:active{ transform:scale(.99); }
+  .shelf-tile .emoji{ display:none; }
+  .shelf-tile .sname{ font-family:var(--font-d); font-weight:700; font-size:26px; line-height:1.02; }
+  .shelf-tile .scount{ font-size:14px; color:var(--ink-2); margin-top:auto; }
+  .shelf-tile .progress{ background:var(--surface); margin-top:2px; }
+  .shelf-tile.done{ border-color:var(--ok); background:var(--ok-soft); }
+  .shelf-tile .check{ position:absolute; top:10px; right:12px; font-size:12px; font-weight:700; background:var(--ok); color:#fff; border-radius:4px; padding:1px 7px; }
+
+  /* Lignes de comptage */
+  .item-row{ display:flex; align-items:center; flex-wrap:wrap; gap:12px; background:var(--surface); border:1px solid var(--line); border-left:7px solid var(--z, var(--line)); border-radius:12px; padding:12px 12px 12px 14px; margin-bottom:8px; }
+  .item-row.counted{ background:var(--ok-soft); }
+  .item-row .info{ flex:1 1 140px; min-width:0; }
+  .item-row .iname{ font-weight:600; font-size:18px; line-height:1.25; }
+  .item-row .imeta{ font-size:14px; color:var(--ink-2); margin-top:2px; }
+  .item-row.counted .iname::after{ content:" ✓"; color:var(--ok); font-weight:700; }
+  .qty-stack{ display:flex; flex-direction:column; gap:8px; flex-shrink:0; margin-left:auto; }
+  .qty{ display:flex; align-items:center; gap:6px; }
+  .qty button{ width:52px; height:52px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); font-size:26px; font-weight:600; cursor:pointer; line-height:1; color:var(--ink); }
+  .qty button.half{ font-family:var(--font-d); font-size:22px; font-weight:700; }
+  .qty button:active{ background:var(--line); }
+  .qty input{ width:80px; height:52px; text-align:center; font-family:var(--font-d); font-size:26px; font-weight:700; border:1px solid var(--line); border-radius:12px; color:var(--ink); background:var(--surface); font-variant-numeric:tabular-nums; }
+  .qty input:focus{ outline:3px solid var(--focus); outline-offset:1px; }
+  .qty .unit{ font-size:14px; font-weight:600; color:var(--ink-2); width:56px; overflow:hidden; text-overflow:ellipsis; }
+  .item-row.readonly .qty input{ background:var(--surface-2); }
+  .save-state{ font-size:14px; font-weight:600; color:var(--ok); text-align:right; height:20px; margin-bottom:4px; }
+  .save-state.err{ color:var(--warn); }
+
+  .admin-row{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px; min-height:58px; margin-bottom:6px; cursor:pointer; }
+  .admin-row .info{ flex:1; min-width:0; font-weight:600; }
+  .admin-row .price{ font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+  .add-line{ border:1px dashed var(--ink-3); border-radius:12px; padding:14px; text-align:center; color:var(--ink); font-weight:600; cursor:pointer; margin-top:4px; }
+  .shelf-head{ display:flex; align-items:center; justify-content:space-between; margin:24px 0 8px 0; }
+  .shelf-head h2{ margin:0; }
+  .shelf-head button{ border:1px solid var(--line); background:var(--surface); color:var(--ink-2); font-weight:600; font-size:14px; border-radius:10px; padding:0 12px; min-height:40px; cursor:pointer; }
+  .type-dot{ display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:8px; vertical-align:middle; }
+
+  .type-bars{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px 18px; }
+  .type-bar{ margin-bottom:14px; }
+  .type-bar .tb-head{ display:flex; justify-content:space-between; gap:10px; font-weight:600; font-size:16px; }
+  .type-bar .tb-head span:last-child{ font-family:var(--font-d); font-size:22px; font-weight:700; white-space:nowrap; }
+  .type-bar .tb-track{ height:10px; background:var(--surface-2); border-radius:5px; margin-top:6px; overflow:hidden; }
+  .type-bar .tb-track span{ display:block; height:100%; border-radius:5px; }
+  .type-total{ display:flex; justify-content:space-between; align-items:baseline; border-top:1px solid var(--line); padding-top:12px; font-weight:700; }
+  .type-total span:last-child{ font-family:var(--font-d); font-size:30px; }
+
+  table.calc{ width:100%; border-collapse:collapse; font-size:15.5px; background:var(--surface); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  table.calc td{ padding:11px 14px; border-bottom:1px solid var(--line); }
+  table.calc td:last-child{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:600; }
+  table.calc tr.total td{ font-weight:700; background:var(--surface-2); }
+  .big-result{ text-align:center; padding:18px; border-radius:16px; background:var(--ok-soft); border:1px solid color-mix(in srgb,var(--ok) 35%,var(--line)); margin:14px 0; }
+  .big-result .pct{ font-family:var(--font-d); font-size:64px; font-weight:700; line-height:1; color:var(--ok); }
+  .big-result.high{ background:var(--warn-soft); border-color:color-mix(in srgb,var(--warn) 35%,var(--line)); }
+  .big-result.high .pct{ color:var(--warn); }
+  .big-result .lbl{ font-size:14px; color:var(--ink-2); margin-top:6px; }
+
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:14px; font-weight:600; color:var(--ink-2); margin-bottom:4px; }
+  .field input, .field select{ width:100%; font:inherit; font-size:17px; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; min-height:50px; }
+
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:320px; margin:0 auto; }
+  .keypad button{ min-height:64px; border-radius:14px; border:1px solid var(--line); background:var(--surface); font-family:var(--font-d); font-size:30px; font-weight:600; color:var(--ink); cursor:pointer; }
+  .keypad button:active{ background:var(--surface-2); }
+  .pin-dots{ display:flex; justify-content:center; gap:14px; margin:14px 0 22px; }
+  .pin-dots span{ width:16px; height:16px; border-radius:50%; border:2px solid var(--ink-3); }
+  .pin-dots span.filled{ background:var(--ink); border-color:var(--ink); }
+  .pin-dots.error span{ border-color:var(--warn); }
+  .center{ text-align:center; }
+  .lock-title{ font-family:var(--font-d); font-size:32px; font-weight:700; margin:24px 0 4px; text-align:center; }
+
+  #modal{ display:none; position:fixed; inset:0; background:rgba(8,12,16,.6); z-index:50; align-items:flex-end; justify-content:center; padding:12px; }
+  #modal.open{ display:flex; }
+  @media (min-width:600px){ #modal{ align-items:center; } }
+  .modal-box{ background:var(--surface); border-radius:20px; padding:18px; width:min(440px,100%); max-height:92vh; overflow-y:auto; }
+  .modal-box .m-title{ font-family:var(--font-d); font-size:30px; font-weight:700; line-height:1.05; margin-bottom:8px; }
+  .modal-box .m-msg{ font-size:15px; color:var(--ink-2); white-space:pre-line; margin-bottom:14px; }
+  .modal-box .m-err{ font-size:14.5px; font-weight:600; color:var(--warn); min-height:20px; margin-bottom:6px; }
+  .modal-box .m-btns{ display:flex; gap:8px; }
+  .modal-box .m-btns button{ flex:1; min-height:54px; border-radius:12px; font-size:17px; font-weight:700; cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--ink); }
+  .modal-box .m-btns button.primary{ background:var(--action); color:var(--action-ink); border-color:var(--action); }
+  .modal-box .m-btns button.danger{ background:var(--warn); color:#fff; border-color:var(--warn); }
+
+  .search{ width:100%; font:inherit; font-size:17px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; min-height:50px; margin-bottom:10px; background:var(--surface); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="tab-strip"><div class="notch"></div></div>
+  <header>
+    <button class="back" id="back-btn" hidden onclick="goBack()" aria-label="Retour">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="titles">
+      <div class="title" id="h-title">Food cost</div>
+      <div class="sub" id="h-sub"></div>
+    </div>
+    <button class="head-action" id="h-action" hidden></button>
+  </header>
+  <main id="main"></main>
+  <div class="footer-bar" id="footer" hidden></div>
+</div>
+
+<div id="modal"><div class="modal-box" id="modal-box"></div></div>
+
+<script>
+/* ================= Etat ================= */
+// Meme origine que l'app Etiquettes DLC : on reprend le restaurant configure
+// sur cette tablette.
+const RESTAURANT_KEY = 'dlc-restaurant-id';
+const NAME_KEY = 'fc-employee-name';
+const UNITS = ['pce', 'kg', 'g', 'L', 'bouteille', 'canette', 'carton', 'sac', 'boîte', 'paquet', 'bidon', 'pot'];
+
+let restaurantId = lsGet(RESTAURANT_KEY);
+let restaurants = [];
+let isManager = false;          // gerant : voit et modifie les prix
+let data = { shelves:[], types:[], items:[], inventories:[] };
+let inventory = null;           // inventaire ouvert a l'ecran (avec counts)
+let route = { name:'home' };
+let stack = [];
+
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+const chf = new Intl.NumberFormat('fr-CH', { style:'currency', currency:'CHF', minimumFractionDigits:2, maximumFractionDigits:2 });
+function money(n){ return chf.format(n || 0); }
+function qtyStr(n){ return (Math.round(n*1000)/1000).toLocaleString('fr-CH', { maximumFractionDigits:3 }); }
+function parseNum(s){
+  if(s === null || s === undefined) return null;
+  s = String(s).trim().replace(',', '.');
+  if(s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+function isoToFr(iso){ if(!iso) return '—'; const [y,m,d] = String(iso).slice(0,10).split('-'); return `${d}.${m}.${y}`; }
+function todayISO(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function api(path, options){
+  const opts = Object.assign({ headers:{ 'Content-Type':'application/json' } }, options || {});
+  if(opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
+  const res = await fetch('/api' + path, opts);
+  let body = null;
+  try{ body = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error((body && body.error) || 'Erreur réseau');
+  return body;
+}
+
+async function loadState(){
+  data = await api('/fc/state?restaurantId=' + encodeURIComponent(restaurantId));
+}
+async function loadInventory(id){
+  inventory = await api('/fc/inventories/' + id);
+  inventory.countMap = {};
+  inventory.counts.forEach(c => { inventory.countMap[c.item_id] = c; });
+}
+
+function activeItems(){ return data.items.filter(i => !i.archived); }
+function itemsOf(shelfId){ return activeItems().filter(i => i.shelf_id === shelfId); }
+function openInventory(){ return data.inventories.find(i => i.status === 'open'); }
+// Prix d'une ligne : fige a la cloture, sinon prix actuel de l'article.
+function linePrice(item){
+  const c = inventory && inventory.countMap[item.id];
+  return c && c.unit_price !== null ? c.unit_price : item.price;
+}
+// Contenance (unites 2 par unite principale), figee a la cloture.
+function lineRatio(item){
+  const c = inventory && inventory.countMap[item.id];
+  return c && c.unit2_per_unit ? c.unit2_per_unit : item.unit2_per_unit;
+}
+// Valeur d'une ligne : cartons entiers + kg entames convertis au prorata
+// du prix du carton (ex. 3 kg a 10 kg/carton = 0.3 carton).
+function lineValue(item, c){
+  if(!c) return 0;
+  const ratio = lineRatio(item);
+  return linePrice(item) * ((c.qty || 0) + (c.qty2 && ratio ? c.qty2 / ratio : 0));
+}
+function inventoryLines(){
+  return data.items
+    .filter(it => inventory.countMap[it.id])
+    .map(it => {
+      const c = inventory.countMap[it.id];
+      return { item:it, qty:c.qty, qty2:c.qty2, price:linePrice(it), value:lineValue(it, c) };
+    });
+}
+// Totaux par type de marchandise (le gerant ne veut pas de total par zone).
+function typeTotals(){
+  const rows = data.types.map(t => ({ id:t.id, name:t.name, inFc:t.in_food_cost !== false, value:0 }));
+  const other = { id:null, name:'Sans type', inFc:true, value:0 };
+  inventoryLines().forEach(l => {
+    const r = rows.find(x => x.id === l.item.type_id) || other;
+    r.value += l.value;
+  });
+  return other.value ? rows.concat(other) : rows;
+}
+// Couleur + icone de chaque zone, devinees depuis son nom.
+const SHELF_COLORS = ['#F2B705','#8B5A2B','#1F6FB2','#E8590C','#D62828','#0B7285','#7B3FA0','#C2255C'];
+const SHELF_ICONS = [[/[ée]pice/i,'🌶️'],[/boisson|drink/i,'🥤'],[/taco/i,'🌮'],[/shawarma|kebab|d[öo]ner/i,'🥙'],
+  [/cong[ée]l/i,'❄️'],[/chambre froide|froid/i,'🧊'],[/frigo/i,'🧊'],[/garage|stock|r[ée]serve|cave/i,'📦'],
+  [/l[ée]gume|fruit/i,'🥬'],[/pain|boulang/i,'🥖'],[/sauce/i,'🥫'],[/nettoy|hygi/i,'🧽'],[/emball/i,'🥡']];
+function shelfLook(shelf){
+  const idx = data.shelves.indexOf(shelf);
+  const icon = (SHELF_ICONS.find(([re]) => re.test(shelf.name)) || [null,'🗄️'])[1];
+  return { icon:'', color: SHELF_COLORS[(idx < 0 ? 0 : idx) % SHELF_COLORS.length] };
+}
+const TYPE_COLORS = ['#2B8A57','#B08968','#5B8DB8','#8E7CC3','#C77D8F','#C9A227'];
+function typeColor(id){
+  const idx = data.types.findIndex(t => t.id === id);
+  return idx < 0 ? '#B8A898' : TYPE_COLORS[idx % TYPE_COLORS.length];
+}
+function typeName(id){ const t = data.types.find(t => t.id === id); return t ? t.name : 'Sans type'; }
+function inventoryValue(){ return inventoryLines().reduce((s,l) => s + l.value, 0); }
+
+/* ================= Navigation ================= */
+function go(name, params){ stack.push(route); route = Object.assign({ name }, params || {}); render(); window.scrollTo(0,0); }
+function goBack(){ route = stack.pop() || { name:'home' }; refreshAndRender(); window.scrollTo(0,0); }
+function goHome(){ stack = []; route = { name:'home' }; refreshAndRender(); }
+
+async function refreshAndRender(){
+  try{
+    await loadState();
+    if(inventory) await loadInventory(inventory.id);
+  }catch(e){ console.error(e); }
+  render();
+}
+
+function setHeader(title, sub, action){
+  document.getElementById('h-title').textContent = title;
+  document.getElementById('h-sub').textContent = sub || '';
+  document.getElementById('back-btn').hidden = stack.length === 0;
+  const a = document.getElementById('h-action');
+  if(action){ a.hidden = false; a.textContent = action.label; a.onclick = action.onClick; }
+  else { a.hidden = true; a.onclick = null; }
+}
+function setFooter(html){
+  const f = document.getElementById('footer');
+  if(html){ f.hidden = false; f.innerHTML = html; } else { f.hidden = true; f.innerHTML = ''; }
+}
+function restaurantName(){ const r = restaurants.find(r => String(r.id) === String(restaurantId)); return r ? r.name : ''; }
+
+function render(){
+  const screens = { home:renderHome, pickRestaurant:renderPickRestaurant, pin:renderPin, shelves:renderShelves, count:renderCount,
+                    inventories:renderInventories, invDetail:renderInvDetail, catalog:renderCatalog };
+  (screens[route.name] || renderHome)();
+}
+
+/* ================= Modale ================= */
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function showMessage(title, msg){
+  return openForm({ title, message:msg, fields:[], submit:'OK', cancel:null });
+}
+function confirmBox(title, msg, okLabel, danger){
+  return openForm({ title, message:msg, fields:[], submit:okLabel || 'Confirmer', danger }).then(r => !!r);
+}
+// fields: [{ key, label, type, value, options, placeholder, inputmode, list }]
+// onSubmit(values) peut lever une erreur : elle s'affiche dans la modale.
+function openForm({ title, message, fields, submit, cancel, danger, onSubmit, extra }){
+  return new Promise(resolve => {
+    const box = document.getElementById('modal-box');
+    let html = `<div class="m-title">${esc(title)}</div>`;
+    if(message) html += `<div class="m-msg">${esc(message)}</div>`;
+    (fields || []).forEach((f, idx) => {
+      html += `<div class="field"><label for="mf${idx}">${esc(f.label)}</label>`;
+      if(f.type === 'select'){
+        html += `<select id="mf${idx}">` + f.options.map(o => `<option value="${esc(o.value)}" ${String(o.value)===String(f.value)?'selected':''}>${esc(o.label)}</option>`).join('') + `</select>`;
+      } else {
+        html += `<input id="mf${idx}" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" placeholder="${esc(f.placeholder || '')}" ${f.inputmode?`inputmode="${f.inputmode}"`:''} ${f.list?`list="${f.list}"`:''} autocomplete="off">`;
+      }
+      html += `</div>`;
+    });
+    html += `<datalist id="units-list">${UNITS.map(u => `<option value="${u}">`).join('')}</datalist>`;
+    html += `<div class="m-err" id="m-err"></div><div class="m-btns">`;
+    if(cancel !== null) html += `<button id="m-cancel">${esc(cancel || 'Annuler')}</button>`;
+    html += `<button id="m-ok" class="${danger?'danger':'primary'}">${esc(submit || 'Enregistrer')}</button></div>`;
+    if(extra) html += `<button class="link" id="m-extra" style="color:var(--warn)">${esc(extra.label)}</button>`;
+    box.innerHTML = html;
+    document.getElementById('modal').classList.add('open');
+    const first = box.querySelector('input'); if(first) setTimeout(() => first.focus(), 50);
+
+    const values = () => {
+      const v = {}; (fields || []).forEach((f, idx) => { v[f.key] = document.getElementById('mf'+idx).value; }); return v;
+    };
+    const ok = async () => {
+      const v = values();
+      if(onSubmit){
+        try{ await onSubmit(v); }
+        catch(e){ document.getElementById('m-err').textContent = e.message; return; }
+      }
+      closeModal(); resolve(v);
+    };
+    document.getElementById('m-ok').onclick = ok;
+    box.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if(e.key === 'Enter') ok(); }));
+    const c = document.getElementById('m-cancel'); if(c) c.onclick = () => { closeModal(); resolve(null); };
+    const x = document.getElementById('m-extra');
+    if(x) x.onclick = async () => { closeModal(); await extra.onClick(); resolve(null); };
+  });
+}
+
+/* ================= Accueil ================= */
+function renderHome(){
+  setHeader('Food cost', restaurantName() + (isManager ? ' · Gérant' : ''));
+  setFooter(null);
+  const main = document.getElementById('main');
+  const open = openInventory();
+  const name = lsGet(NAME_KEY);
+  let html = '';
+
+  html += `<h2>Inventaire en cours</h2>`;
+  if(open){
+    const total = activeItems().length;
+    const pct = total ? Math.round(open.counted / total * 100) : 0;
+    html += `<div class="card clickable" onclick="startCounting(${open.id})">
+      <div class="row"><div><div class="name">${esc(open.label)}</div><div class="meta">${isoToFr(open.inv_date)} · ${open.counted} / ${total} articles comptés</div></div>
+      ${isManager ? `<div class="value">${money(open.total)}</div>` : `<div class="value">${pct} %</div>`}</div>
+      <div class="progress"><span style="width:${pct}%"></span></div></div>
+      <button class="btn btn-primary" onclick="startCounting(${open.id})">Compter le stock</button>`;
+  } else {
+    html += `<p class="hint">Aucun inventaire en cours.${isManager ? '' : ' Le gérant doit en ouvrir un (début ou fin de mois).'}</p>`;
+    if(isManager) html += `<button class="btn btn-primary" onclick="newInventory()">Nouvel inventaire</button>`;
+  }
+
+  if(isManager){
+    html += `<h2>Gestion</h2>
+      <button class="btn btn-dark" onclick="go('inventories')">Inventaires & food cost</button>
+      <button class="btn btn-ghost" onclick="go('catalog')">Articles, prix & étagères</button>
+      <button class="link" onclick="isManager=false;render()">Quitter le mode gérant</button>`;
+  } else {
+    html += `<button class="link" onclick="go('pin')">Accès gérant</button>`;
+  }
+  html += `<p class="hint center" style="margin-top:18px;font-size:12px;">
+    ${name ? `Compté par : <b>${esc(name)}</b> · <a href="#" onclick="askName();return false;">changer</a>` : ''}
+    ${restaurants.length > 1 ? ` · <a href="#" onclick="go('pickRestaurant');return false;">changer de restaurant</a>` : ''}
+    · <a href="/">Étiquettes DLC</a></p>`;
+  main.innerHTML = html;
+}
+
+async function askName(){
+  const v = await openForm({ title:'Votre prénom', message:'Il est enregistré avec chaque quantité saisie.', fields:[{ key:'name', label:'Prénom', value:lsGet(NAME_KEY) || '' }], submit:'OK',
+    onSubmit: v => { if(!v.name.trim()) throw new Error('Prénom requis'); } });
+  if(v){ lsSet(NAME_KEY, v.name.trim()); render(); }
+  return v;
+}
+
+async function startCounting(id){
+  if(!lsGet(NAME_KEY) && !(await askName())) return;
+  await loadInventory(id);
+  go('shelves');
+}
+
+function renderPickRestaurant(){
+  setHeader('Restaurant', 'Choisir le restaurant à inventorier');
+  setFooter(null);
+  document.getElementById('main').innerHTML = restaurants.map(r =>
+    `<div class="card clickable" onclick="pickRestaurant(${r.id})"><div class="name">${esc(r.name)}</div></div>`).join('')
+    || `<p class="hint">Aucun restaurant. Créez-en un dans l'application Étiquettes DLC.</p>`;
+}
+async function pickRestaurant(id){
+  restaurantId = String(id); lsSet(RESTAURANT_KEY, restaurantId);
+  inventory = null; goHome();
+}
+
+/* ================= Code gerant ================= */
+let pin = '';
+function renderPin(){
+  setHeader('Accès gérant', 'Même code que l’administrateur Étiquettes DLC');
+  setFooter(null);
+  pin = '';
+  const keys = [1,2,3,4,5,6,7,8,9].map(n => `<button onclick="pinKey('${n}')">${n}</button>`).join('');
+  document.getElementById('main').innerHTML = `<div class="lock-title">Code gérant</div>
+    <div class="pin-dots" id="dots"><span></span><span></span><span></span><span></span></div>
+    <div class="keypad">${keys}<button onclick="pinKey('C')" style="font-size:13px;color:var(--muted)">Effacer</button><button onclick="pinKey('0')">0</button><button onclick="goBack()" style="font-size:13px;color:var(--muted)">Annuler</button></div>`;
+}
+async function pinKey(k){
+  if(k === 'C'){ pin = ''; } else if(pin.length < 4){ pin += k; }
+  const dots = document.getElementById('dots');
+  dots.classList.remove('error');
+  dots.querySelectorAll('span').forEach((s,i) => s.classList.toggle('filled', i < pin.length));
+  if(pin.length === 4){
+    try{
+      await api('/login', { method:'POST', body:{ type:'admin', code:pin } });
+      isManager = true; goHome();
+    }catch(e){
+      dots.classList.add('error'); pin = '';
+      setTimeout(() => dots.querySelectorAll('span').forEach(s => s.classList.remove('filled')), 250);
+    }
+  }
+}
+
+/* ================= Comptage : liste des etageres ================= */
+function renderShelves(){
+  const counted = id => itemsOf(id).filter(i => inventory.countMap[i.id]).length;
+  setHeader(inventory.label, isoToFr(inventory.inv_date) + (inventory.status === 'closed' ? ' · clôturé' : ' · choisir une étagère / zone'));
+  let html = '';
+  if(inventory.status === 'closed') html += `<p class="hint">Cet inventaire est clôturé : lecture seule.</p>`;
+  html += `<div class="shelf-grid">`;
+  data.shelves.forEach(s => {
+    const total = itemsOf(s.id).length;
+    const n = counted(s.id);
+    const done = total > 0 && n === total;
+    const look = shelfLook(s);
+    html += `<div class="shelf-tile ${done?'done':''}" style="--z:${look.color}" onclick="go('count',{shelfId:${s.id}})">
+      ${done ? '<div class="check">Terminé</div>' : ''}
+      <div class="emoji">${look.icon}</div><div class="sname">${esc(s.name)}</div>
+      <div class="scount">${n} / ${total} comptés</div>
+      <div class="progress"><span style="width:${total ? n/total*100 : 0}%"></span></div></div>`;
+  });
+  html += `</div>`;
+  if(!data.shelves.length) html += `<p class="hint">Aucune étagère. Le gérant doit les créer dans « Articles, prix & étagères ».</p>`;
+  document.getElementById('main').innerHTML = html;
+  const all = activeItems().length, n = activeItems().filter(i => inventory.countMap[i.id]).length;
+  setFooter(isManager
+    ? `<span>${n} / ${all} articles</span><span>Total stock <strong>${money(inventoryValue())}</strong></span>`
+    : `<span>Progression</span><strong>${n} / ${all}</strong>`);
+}
+
+/* ================= Comptage : une etagere ================= */
+let saveTimers = {};
+function renderCount(){
+  const shelf = data.shelves.find(s => s.id === route.shelfId);
+  if(!shelf){ goBack(); return; }
+  const readonly = inventory.status !== 'open';
+  setHeader(shelf.name, inventory.label);
+  const items = itemsOf(shelf.id);
+  let html = `<div class="save-state" id="save-state"></div>`;
+  if(items.length > 8) html += `<input class="search" placeholder="Rechercher un article…" oninput="filterRows(this.value)">`;
+  html += `<div id="rows">`;
+  items.forEach(it => {
+    const c = inventory.countMap[it.id];
+    const qtyLine = (field, value, unit) => `<div class="qty">
+        ${readonly ? '' : `<button class="minus" onclick="stepQty(${it.id},'${field}',-1)" aria-label="Moins">−</button>`}
+        <input id="${field}-${it.id}" inputmode="decimal" value="${value === null || value === undefined ? '' : qtyStr(value)}" placeholder="—" ${readonly?'readonly':''} oninput="onQtyInput(${it.id})" onfocus="this.select()">
+        ${readonly ? '' : `<button class="plus" onclick="stepQty(${it.id},'${field}',1)" aria-label="Plus">+</button>`}
+        ${readonly || field !== 'q' ? '' : `<button class="half" onclick="stepQty(${it.id},'q',0.5)" aria-label="Ajouter une demie">½</button>`}
+        <span class="unit">${esc(unit)}</span></div>`;
+    const ratioNote = it.unit2 ? `<div class="imeta">1 ${esc(it.unit)} = ${qtyStr(lineRatio(it))} ${esc(it.unit2)}</div>` : '';
+    html += `<div class="item-row ${c?'counted':''} ${readonly?'readonly':''}" style="--z:${shelfLook(shelf).color}" data-id="${it.id}" data-name="${esc(it.name.toLowerCase())}">
+      <div class="info"><div class="iname">${esc(it.name)}</div>${ratioNote}
+        ${isManager ? `<div class="imeta">${money(linePrice(it))} / ${esc(it.unit)}<span id="lv-${it.id}">${c ? ' · ' + money(lineValue(it, c)) : ''}</span></div>` : ''}</div>
+      <div class="qty-stack">${qtyLine('q', c && c.qty, it.unit)}${it.unit2 ? qtyLine('q2', c && c.qty2, it.unit2) : ''}</div></div>`;
+  });
+  html += `</div>`;
+  if(!items.length) html += `<p class="hint">Aucun article sur cette étagère.${isManager ? '' : ' Le gérant doit les ajouter.'}</p>`;
+  if(isManager && !readonly) html += `<div class="add-line" onclick="editItem(null, ${shelf.id}, true)">+ Ajouter un article ici</div>`;
+  if(!readonly && items.length) html += `<p class="hint" style="margin-top:14px">Les virgules sont acceptées : tapez par ex. 1,5 ou 3,2. Le bouton <b>½</b> ajoute une demi-unité (boîte ou carton entamé).<br>Deux lignes = emballages fermés en haut, marchandise entamée pesée (kg…) en bas.<br>Laisser vide = pas encore compté. Mettre 0 si l'article est en rupture.</p>`;
+  document.getElementById('main').innerHTML = html;
+  updateCountFooter(shelf.id);
+}
+function filterRows(q){
+  q = q.trim().toLowerCase();
+  document.querySelectorAll('#rows .item-row').forEach(r => { r.style.display = !q || r.dataset.name.includes(q) ? '' : 'none'; });
+}
+function updateCountFooter(shelfId){
+  const items = itemsOf(shelfId), n = items.filter(i => inventory.countMap[i.id]).length;
+  setFooter(`<span>Comptés</span><strong>${n} / ${items.length}</strong>`);
+}
+function stepQty(itemId, field, delta){
+  const input = document.getElementById(field + '-' + itemId);
+  const cur = parseNum(input.value);
+  const next = Math.max(0, (Number.isFinite(cur) ? cur : 0) + delta);
+  input.value = qtyStr(next);
+  onQtyInput(itemId);
+}
+function onQtyInput(itemId){
+  clearTimeout(saveTimers[itemId]);
+  saveTimers[itemId] = setTimeout(() => saveQty(itemId), 450);
+}
+async function saveQty(itemId){
+  const input = document.getElementById('q-' + itemId);
+  if(!input) return;
+  const input2 = document.getElementById('q2-' + itemId);
+  const state = document.getElementById('save-state');
+  const n = parseNum(input.value);
+  const n2 = input2 ? parseNum(input2.value) : null;
+  if(Number.isNaN(n) || n < 0 || Number.isNaN(n2) || n2 < 0){ state.textContent = 'Quantité invalide'; state.className = 'save-state err'; return; }
+  const empty = n === null && n2 === null;
+  state.textContent = 'Enregistrement…'; state.className = 'save-state';
+  try{
+    await api(`/fc/inventories/${inventory.id}/counts/${itemId}`, { method:'PUT', body:{ qty: n === null ? '' : n, qty2: n2 === null ? '' : n2, countedBy: lsGet(NAME_KEY) } });
+    if(empty) delete inventory.countMap[itemId];
+    else inventory.countMap[itemId] = Object.assign(inventory.countMap[itemId] || { unit_price:null, unit2_per_unit:null }, { item_id:itemId, qty:n, qty2:n2 });
+    state.textContent = 'Enregistré ✓';
+    const row = input.closest('.item-row'); row.classList.toggle('counted', !empty);
+    const item = data.items.find(i => i.id === itemId);
+    const lv = document.getElementById('lv-' + itemId);
+    if(lv) lv.textContent = empty ? '' : ' · ' + money(lineValue(item, inventory.countMap[itemId]));
+    updateCountFooter(item.shelf_id);
+  }catch(e){
+    state.textContent = 'Non enregistré : ' + e.message; state.className = 'save-state err';
+  }
+}
+
+/* ================= Gerant : inventaires ================= */
+async function newInventory(){
+  const d = new Date();
+  const month = d.toLocaleDateString('fr-CH', { month:'long', year:'numeric' });
+  const v = await openForm({ title:'Nouvel inventaire', message:'Un inventaire en fin de mois sert aussi de stock de début pour le mois suivant.',
+    fields:[{ key:'label', label:'Nom', value:'Inventaire ' + month }, { key:'date', label:'Date', type:'date', value:todayISO() }],
+    submit:'Créer',
+    onSubmit: async v => { const r = await api('/fc/inventories', { method:'POST', body:{ restaurantId, label:v.label, invDate:v.date } }); v.id = r.id; } });
+  if(!v) return;
+  await loadState();
+  await loadInventory(v.id);
+  go('invDetail', { id:v.id });
+}
+
+// Food cost de la periode qui se termine a l'inventaire `inv` :
+// stock de debut = inventaire cloture precedent (par date).
+function periodFor(inv){
+  const sorted = data.inventories.filter(i => i.status === 'closed' && i.id !== inv.id)
+    .filter(i => i.inv_date < inv.inv_date || (i.inv_date === inv.inv_date && i.id < inv.id))
+    .sort((a,b) => a.inv_date < b.inv_date ? 1 : a.inv_date > b.inv_date ? -1 : b.id - a.id);
+  const prev = sorted[0] || null;
+  // Seuls les types comptes dans le food cost (pas le nettoyage).
+  const res = { prev, opening: prev ? prev.fc_total : null, purchases: inv.purchases, closing: inv.fc_total, sales: inv.sales };
+  if(prev && inv.purchases !== null){
+    res.consumption = res.opening + res.purchases - res.closing;
+    if(inv.sales) res.pct = res.consumption / inv.sales * 100;
+  }
+  return res;
+}
+
+function renderInventories(){
+  setHeader('Inventaires', restaurantName(), { label:'+ Nouveau', onClick:newInventory });
+  setFooter(null);
+  let html = '';
+  if(!data.inventories.length) html = `<p class="hint">Aucun inventaire. Faites un premier inventaire (stock de départ), puis un à chaque fin de mois.</p>`;
+  data.inventories.forEach(inv => {
+    const p = periodFor(inv);
+    html += `<div class="card clickable" onclick="openInvDetail(${inv.id})">
+      <div class="row"><div><div class="name">${esc(inv.label)}</div>
+        <div class="meta">${isoToFr(inv.inv_date)} · ${inv.counted} lignes${p.pct !== undefined ? ` · food cost <b>${p.pct.toFixed(1)} %</b>` : ''}</div></div>
+      <div style="text-align:right"><div class="value">${money(inv.total)}</div><span class="pill ${inv.status}">${inv.status === 'open' ? 'En cours' : 'Clôturé'}</span></div></div></div>`;
+  });
+  document.getElementById('main').innerHTML = html;
+}
+async function openInvDetail(id){ await loadInventory(id); go('invDetail', { id }); }
+
+function renderInvDetail(){
+  const inv = data.inventories.find(i => i.id === route.id);
+  if(!inv){ goBack(); return; }
+  const open = inv.status === 'open';
+  setHeader(inv.label, isoToFr(inv.inv_date) + (open ? ' · en cours' : ' · clôturé'), { label:'Modifier', onClick:() => editInventory(inv) });
+  setFooter(`<span>Valeur du stock</span><strong>${money(inv.total)}</strong>`);
+  const p = periodFor(inv);
+
+  let html = `<h2>Stock par type de marchandise</h2>`;
+  html += `<button class="btn btn-primary" onclick="go('shelves')">${open ? 'Compter / voir par étagère' : 'Voir le détail par étagère'}</button>`;
+  const totals = typeTotals();
+  const maxV = Math.max(1, ...totals.map(t => t.value));
+  html += `<div class="type-bars" style="margin-top:14px">`;
+  totals.forEach(t => {
+    html += `<div class="type-bar"><div class="tb-head"><span><span class="type-dot" style="background:${typeColor(t.id)}"></span>${esc(t.name)}${t.inFc ? '' : ' <span class="hint" style="font-size:13px">(hors food cost)</span>'}</span><span>${money(t.value)}</span></div>
+      <div class="tb-track"><span style="width:${t.value / maxV * 100}%;background:${typeColor(t.id)}"></span></div></div>`;
+  });
+  html += `<div class="type-total"><span>Total stock</span><span>${money(inv.total)}</span></div></div>`;
+
+  html += `<h2>Food cost de la période</h2>`;
+  const excluded = data.types.filter(t => t.in_food_cost === false).map(t => t.name);
+  if(excluded.length) html += `<p class="hint" style="margin-top:-4px">Calculé sur ${esc(data.types.filter(t => t.in_food_cost !== false).map(t => t.name.toLowerCase()).join(' + '))}. Non compté : ${esc(excluded.join(', ').toLowerCase())}.</p>`;
+  html += `<div class="field"><label>Achats de la période${excluded.length ? ' <b>sans ' + esc(excluded.join(', ').toLowerCase()) + '</b>' : ''} (CHF, factures fournisseurs)</label>
+      <input id="f-purchases" inputmode="decimal" value="${inv.purchases ?? ''}" placeholder="ex. 18500" onchange="savePeriod(${inv.id})"></div>
+    <div class="field"><label>Chiffre d'affaires de la période (CHF)</label>
+      <input id="f-sales" inputmode="decimal" value="${inv.sales ?? ''}" placeholder="ex. 62000" onchange="savePeriod(${inv.id})"></div>`;
+  if(!p.prev){
+    html += `<p class="hint">Pas d'inventaire clôturé avant celui-ci : il sert de stock de départ. Le food cost se calcule à partir du prochain inventaire.</p>`;
+  } else {
+    html += `<table class="calc">
+      <tr><td>Stock début (${esc(p.prev.label)}, ${isoToFr(p.prev.inv_date)})</td><td>${money(p.opening)}</td></tr>
+      <tr><td>+ Achats de la période</td><td>${p.purchases !== null ? money(p.purchases) : '—'}</td></tr>
+      <tr><td>− Stock fin (cet inventaire)</td><td>${money(p.closing)}</td></tr>
+      <tr class="total"><td>= Consommation (coût marchandises)</td><td>${p.consumption !== undefined ? money(p.consumption) : '—'}</td></tr>
+      <tr><td>Chiffre d'affaires</td><td>${p.sales ? money(p.sales) : '—'}</td></tr></table>`;
+    if(p.pct !== undefined){
+      html += `<div class="big-result ${p.pct > 35 ? 'high' : ''}"><div class="pct">${p.pct.toFixed(1)} %</div><div class="lbl">Food cost = consommation ÷ chiffre d'affaires</div></div>`;
+    } else {
+      html += `<p class="hint">Saisissez les achats et le chiffre d'affaires pour obtenir le food cost en %.</p>`;
+    }
+  }
+
+  html += `<h2>Actions</h2>`;
+  html += `<button class="btn btn-ghost" onclick="exportCsv(${inv.id})">Exporter pour Excel</button>`;
+  if(open){
+    const missing = activeItems().filter(i => !inventory.countMap[i.id]).length;
+    html += `<button class="btn btn-dark" onclick="closeInventory(${inv.id}, ${missing})">Clôturer l'inventaire</button>`;
+  } else {
+    html += `<button class="btn btn-light" onclick="reopenInventory(${inv.id})">Rouvrir pour corriger</button>`;
+  }
+  html += `<button class="btn btn-danger" onclick="deleteInventory(${inv.id})">Supprimer l'inventaire</button>`;
+  document.getElementById('main').innerHTML = html;
+}
+
+async function savePeriod(id){
+  const purchases = document.getElementById('f-purchases').value;
+  const sales = document.getElementById('f-sales').value;
+  try{
+    await api('/fc/inventories/' + id, { method:'PUT', body:{ purchases, sales } });
+    await refreshAndRender();
+  }catch(e){ showMessage('Erreur', e.message); }
+}
+async function editInventory(inv){
+  const v = await openForm({ title:'Modifier l’inventaire', fields:[
+      { key:'label', label:'Nom', value:inv.label },
+      { key:'date', label:'Date', type:'date', value:String(inv.inv_date).slice(0,10) }],
+    onSubmit: v => api('/fc/inventories/' + inv.id, { method:'PUT', body:{ label:v.label, invDate:v.date } }) });
+  if(v) refreshAndRender();
+}
+async function closeInventory(id, missing){
+  const msg = (missing ? `${missing} article(s) n'ont pas été comptés : ils seront considérés à 0.\n\n` : '') +
+    'Les prix d’achat actuels seront figés pour cet inventaire.';
+  if(!(await confirmBox('Clôturer l’inventaire ?', msg, 'Clôturer'))) return;
+  await api(`/fc/inventories/${id}/close`, { method:'POST' });
+  refreshAndRender();
+}
+async function reopenInventory(id){
+  if(!(await confirmBox('Rouvrir l’inventaire ?', 'Les quantités redeviennent modifiables et l’inventaire sera valorisé aux prix actuels jusqu’à la prochaine clôture.', 'Rouvrir'))) return;
+  await api(`/fc/inventories/${id}/reopen`, { method:'POST' });
+  refreshAndRender();
+}
+async function deleteInventory(id){
+  if(!(await confirmBox('Supprimer l’inventaire ?', 'Toutes les quantités comptées seront perdues. Action irréversible.', 'Supprimer', true))) return;
+  await api('/fc/inventories/' + id, { method:'DELETE' });
+  inventory = null;
+  goBack();
+}
+
+function exportCsv(id){
+  const inv = data.inventories.find(i => i.id === id);
+  const shelfName = sid => (data.shelves.find(s => s.id === sid) || {}).name || '';
+  const num = n => String(Math.round(n * 1000) / 1000).replace('.', ',');
+  const rows = [['Type','Étagère','Article','Unité','Quantité','Entamé','Unité entamé','Prix achat CHF','Valeur CHF']];
+  const lines = inventoryLines().sort((a,b) => typeName(a.item.type_id).localeCompare(typeName(b.item.type_id)) || shelfName(a.item.shelf_id).localeCompare(shelfName(b.item.shelf_id)) || a.item.name.localeCompare(b.item.name));
+  const opt = n => n === null || n === undefined ? '' : num(n);
+  lines.forEach(l => rows.push([typeName(l.item.type_id), shelfName(l.item.shelf_id), l.item.name, l.item.unit, opt(l.qty), opt(l.qty2), l.qty2 !== null && l.qty2 !== undefined ? l.item.unit2 || '' : '', num(l.price), num(l.value)]));
+  rows.push([]);
+  typeTotals().forEach(t => rows.push(['','','','','','','','Total ' + t.name, num(t.value)]));
+  rows.push(['','','','','','','','Total stock', num(inventoryValue())]);
+  const csv = '﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
+  a.download = `${inv.label.replace(/[^\w\- ]+/g,'')} ${inv.inv_date.slice(0,10)}.csv`;
+  a.click();
+}
+
+/* ================= Gerant : articles, prix, etageres ================= */
+function renderCatalog(){
+  setHeader('Articles & prix', 'Prix d’achat en CHF par unité', { label:'+ Étagère', onClick:addShelf });
+  setFooter(null);
+  let html = `<div class="shelf-head" style="margin-top:4px"><h2>Types de marchandise</h2><button onclick="addType()">+ Type</button></div>`;
+  data.types.forEach(t => {
+    const n = activeItems().filter(i => i.type_id === t.id).length;
+    html += `<div class="admin-row" onclick="editType(${t.id})"><div class="info"><span class="type-dot" style="background:${typeColor(t.id)}"></span>${esc(t.name)}${t.in_food_cost === false ? ' <span class="hint" style="font-size:13px;font-weight:500">(hors food cost)</span>' : ''}</div><div class="hint">${n} article(s)</div></div>`;
+  });
+  html += activeItems().length > 8 ? `<input class="search" style="margin-top:18px" placeholder="Rechercher un article…" oninput="filterCatalog(this.value)">` : '';
+  data.shelves.forEach(s => {
+    html += `<div class="shelf-head" data-shelf="${s.id}"><h2><span class="type-dot" style="background:${shelfLook(s).color}"></span>${esc(s.name)}</h2><button onclick="editShelf(${s.id})">Renommer / suppr.</button></div>`;
+    itemsOf(s.id).forEach(it => {
+      html += `<div class="admin-row" data-name="${esc(it.name.toLowerCase())}" onclick="editItem(${it.id})">
+        <div class="info">${esc(it.name)}<div class="hint" style="font-size:12px"><span class="type-dot" style="background:${typeColor(it.type_id)};width:9px;height:9px"></span>${esc(typeName(it.type_id))}</div></div><div class="price">${money(it.price)} <span class="hint" style="font-weight:400">/ ${esc(it.unit)}${it.unit2 ? ` · 1 = ${qtyStr(it.unit2_per_unit)} ${esc(it.unit2)}` : ''}</span></div></div>`;
+    });
+    html += `<div class="add-line" onclick="editItem(null, ${s.id})">+ Ajouter un article</div>`;
+  });
+  const orphans = activeItems().filter(i => !data.shelves.some(s => s.id === i.shelf_id));
+  if(orphans.length){
+    html += `<div class="shelf-head"><h2>Sans étagère</h2></div>`;
+    orphans.forEach(it => { html += `<div class="admin-row" data-name="${esc(it.name.toLowerCase())}" onclick="editItem(${it.id})"><div class="info">${esc(it.name)}</div><div class="price">${money(it.price)}</div></div>`; });
+  }
+  if(!data.shelves.length) html += `<p class="hint">Créez d'abord une étagère ou une zone (ex. Frigo tacos, Congélateur…).</p>`;
+  document.getElementById('main').innerHTML = html;
+}
+function filterCatalog(q){
+  q = q.trim().toLowerCase();
+  document.querySelectorAll('.admin-row').forEach(r => { r.style.display = !q || r.dataset.name.includes(q) ? '' : 'none'; });
+}
+
+async function addType(){
+  const v = await openForm({ title:'Nouveau type de marchandise', fields:[{ key:'name', label:'Nom', placeholder:'ex. Boissons' }],
+    onSubmit: v => api('/fc/types', { method:'POST', body:{ restaurantId, name:v.name } }) });
+  if(v) refreshAndRender();
+}
+async function editType(id){
+  const t = data.types.find(x => x.id === id);
+  await openForm({ title:'Type de marchandise', fields:[{ key:'name', label:'Nom', value:t.name },
+      { key:'fc', label:'Compté dans le food cost ?', type:'select', value: t.in_food_cost === false ? 'non' : 'oui',
+        options:[{ value:'oui', label:'Oui' }, { value:'non', label:'Non (ex. produits de nettoyage)' }] }],
+    onSubmit: v => api('/fc/types/' + id, { method:'PUT', body:{ name:v.name, inFoodCost: v.fc === 'oui' } }),
+    extra:{ label:'Supprimer ce type', onClick: async () => {
+      if(!(await confirmBox('Supprimer « ' + t.name + ' » ?', 'Aucun article ne doit avoir ce type.', 'Supprimer', true))) return;
+      try{ await api('/fc/types/' + id, { method:'DELETE' }); }catch(e){ await showMessage('Impossible', e.message); }
+    } } });
+  refreshAndRender();
+}
+
+async function addShelf(){
+  const v = await openForm({ title:'Nouvelle étagère / zone', fields:[{ key:'name', label:'Nom', placeholder:'ex. Frigo boissons' }],
+    onSubmit: v => api('/fc/shelves', { method:'POST', body:{ restaurantId, name:v.name } }) });
+  if(v) refreshAndRender();
+}
+async function editShelf(id){
+  const s = data.shelves.find(x => x.id === id);
+  const v = await openForm({ title:'Étagère / zone', fields:[{ key:'name', label:'Nom', value:s.name }],
+    onSubmit: v => api('/fc/shelves/' + id, { method:'PUT', body:{ name:v.name } }),
+    extra:{ label:'Supprimer cette étagère', onClick: async () => {
+      if(!(await confirmBox('Supprimer « ' + s.name + ' » ?', 'L’étagère doit être vide.', 'Supprimer', true))) return;
+      try{ await api('/fc/shelves/' + id, { method:'DELETE' }); }catch(e){ await showMessage('Impossible', e.message); }
+    } } });
+  refreshAndRender();
+  return v;
+}
+
+async function editItem(id, shelfId){
+  const it = id ? data.items.find(i => i.id === id) : null;
+  const v = await openForm({
+    title: it ? 'Modifier l’article' : 'Nouvel article',
+    message: it ? '' : 'Prix d’achat HT ou TTC : restez cohérent avec vos factures fournisseurs.',
+    fields:[
+      { key:'name', label:'Nom de l’article', value: it ? it.name : '', placeholder:'ex. Cumin moulu 1 kg' },
+      { key:'unit', label:'Unité principale (celle de la facture)', value: it ? it.unit : 'pce', list:'units-list', placeholder:'pce, kg, carton…' },
+      { key:'price', label:'Prix d’achat par unité principale (CHF)', value: it ? String(it.price) : '', inputmode:'decimal', placeholder:'ex. 12.50' },
+      { key:'unit2', label:'2e unité pour la marchandise entamée (facultatif)', value: it && it.unit2 ? it.unit2 : '', list:'units-list', placeholder:'ex. kg — laisser vide si inutile' },
+      { key:'ratio', label:'Contenance : combien de cette 2e unité dans 1 unité principale ?', value: it && it.unit2_per_unit ? String(it.unit2_per_unit) : '', inputmode:'decimal', placeholder:'ex. 10 (carton de poulet = 10 kg) ou 2,5 (boîte de maïs = 2,5 kg)' },
+      { key:'typeId', label:'Type de marchandise', type:'select', value: it ? it.type_id : (data.types[0] || {}).id, options: data.types.map(t => ({ value:t.id, label:t.name })) },
+      { key:'shelfId', label:'Étagère / zone', type:'select', value: it ? it.shelf_id : shelfId, options: data.shelves.map(s => ({ value:s.id, label:s.name })) }
+    ],
+    submit: it ? 'Enregistrer' : 'Ajouter',
+    onSubmit: v => {
+      const p = parseNum(v.price);
+      if(p === null || Number.isNaN(p) || p < 0) throw new Error('Prix d’achat invalide');
+      const body = { name:v.name, unit:v.unit, price:p, shelfId:Number(v.shelfId), typeId:Number(v.typeId) || null, unit2:v.unit2, unit2PerUnit:v.ratio };
+      return it ? api('/fc/items/' + it.id, { method:'PUT', body })
+                : api('/fc/items', { method:'POST', body:Object.assign({ restaurantId }, body) });
+    },
+    extra: it ? { label:'Supprimer cet article', onClick: async () => {
+      if(!(await confirmBox('Supprimer « ' + it.name + ' » ?', 'Les inventaires déjà clôturés le conservent.', 'Supprimer', true))) return;
+      await api('/fc/items/' + it.id, { method:'DELETE' });
+    } } : null
+  });
+  await refreshAndRender();
+  return v;
+}
+
+/* ================= Demarrage ================= */
+(async function init(){
+  try{
+    restaurants = await api('/restaurants');
+    if(!restaurantId || !restaurants.some(r => String(r.id) === String(restaurantId))){
+      if(restaurants.length === 1){ restaurantId = String(restaurants[0].id); lsSet(RESTAURANT_KEY, restaurantId); }
+      else { route = { name:'pickRestaurant' }; render(); return; }
+    }
+    await loadState();
+    render();
+  }catch(e){
+    document.getElementById('main').innerHTML = `<p class="hint">Impossible de joindre le serveur : ${esc(e.message)}</p>`;
+  }
+})();
+</script>
+</body>
+</html>
