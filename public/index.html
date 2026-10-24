@@ -1002,14 +1002,21 @@ let alertIndex = 0;
 function renderGlobalAlert(){
   const el = document.getElementById('global-alert');
   if(!el) return;
-  // Suspendu uniquement pendant la saisie du code admin / la configuration
-  // de la tablette, pour ne pas gener ces ecrans sensibles. Partout ailleurs
-  // (y compris l'accueil), l'alerte bloque normalement.
-  const suppressed = (current==='login-pin' || current==='device-setup');
+  const isAdmin = currentUser && currentUser.type === 'admin';
+  // Suspendu entierement pendant la saisie du code admin / la configuration
+  // de la tablette, pour ne pas gener ces ecrans sensibles. Pour un admin
+  // connecte, l'alerte reste visible (bandeau discret) mais ne bloque plus
+  // l'ecran : il doit pouvoir naviguer/modifier sans etre interrompu a
+  // chaque DLC depassee, et peut traiter sans l'imprimante connectee (seule
+  // une reimpression eventuelle la necessitera). Pour un employe (pas de
+  // compte admin), le comportement reste inchange : bloquant, imprimante
+  // requise pour confirmer.
+  const hidden = (current==='login-pin' || current==='device-setup');
   const expired = allExpiredProducts();
   if(!expired.length){ el.innerHTML = ''; el.classList.remove('idle','blocking'); return; }
-  const blocking = !suppressed;
-  el.classList.toggle('idle', suppressed);
+  if(hidden){ el.innerHTML = ''; el.classList.remove('idle','blocking'); return; }
+  const blocking = !isAdmin;
+  el.classList.toggle('idle', isAdmin);
   el.classList.toggle('blocking', blocking);
   if(alertIndex >= expired.length) alertIndex = 0;
   const p = expired[alertIndex];
@@ -1024,11 +1031,9 @@ function renderGlobalAlert(){
       <div class="p-dates"><span>Imprimé ${isoToFr(p.lastPrinted.printDate).slice(0,5)}</span><span>${fridgeName(p.fridgeId)}</span></div>
       <div class="p-dlc">À consommer avant le ${isoToFr(p.lastPrinted.dlcDate)}</div>
     </div>
-    ${suppressed
-      ? ''
-      : (bleConnected
-          ? `<button class="treat-btn" onclick="confirmTreated('${p.id}')">J'ai traité ce produit</button>`
-          : `<button class="ble-gate-btn disconnected" style="margin-top:12px;" onclick="connectPrinterQuick()">🖨️ Connecter l'imprimante pour continuer</button>`)}
+    ${(isAdmin || bleConnected)
+      ? `<button class="treat-btn" onclick="confirmTreated('${p.id}')">J'ai traité ce produit</button>`
+      : `<button class="ble-gate-btn disconnected" style="margin-top:12px;" onclick="connectPrinterQuick()">🖨️ Connecter l'imprimante pour continuer</button>`}
     ${expired.length>1 ? `<div class="alert-nav">
       <button onclick="cycleAlert(-1)">‹</button>
       <span>${alertIndex+1} / ${expired.length} produits concernés</span>
