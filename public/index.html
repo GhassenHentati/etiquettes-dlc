@@ -716,10 +716,11 @@ function disconnectPrinter(){
   renderBlePrinterStatus();
 }
 
-// Met a jour l'etat Bluetooth partout ou il est affiche, et bloque les
-// actions d'impression tant que l'imprimante n'est pas connectee : le
-// bouton d'etat (accueil + fiche produit) est rouge/vert, et "Imprimer"
-// reste desactive tant qu'il est rouge - il faut appuyer dessus d'abord.
+// Met a jour l'etat Bluetooth partout ou il est affiche, et bloque
+// uniquement l'impression elle-meme (pas la navigation) tant que
+// l'imprimante n'est pas connectee : le bouton "Imprimer l'etiquette"
+// reste desactive, mais consulter produits/categories reste toujours
+// possible meme loin de l'imprimante (ex : tests depuis le bureau).
 function renderBlePrinterStatus(){
   const settingsEl = document.getElementById('ble-status');
   if(settingsEl){
@@ -736,10 +737,12 @@ function renderBlePrinterStatus(){
     btn.classList.toggle('disconnected', !bleConnected);
     btn.textContent = bleConnected ? `🖨️ Imprimante connectée (${bleDeviceName})` : '🖨️ Imprimante déconnectée — appuyer pour connecter';
   });
-  ['home-print-btn', 'print-label-btn'].forEach(id=>{
-    const btn = document.getElementById(id);
-    if(btn) btn.disabled = !bleConnected;
-  });
+  // Seule l'impression elle-meme est bloquee, pas la navigation : un admin
+  // doit pouvoir consulter produits/categories loin de l'imprimante (ex :
+  // au bureau) sans etre connecte. "home-print-btn" ouvre juste les
+  // categories, "print-label-btn" declenche une vraie impression.
+  const printBtn = document.getElementById('print-label-btn');
+  if(printBtn) printBtn.disabled = !bleConnected;
 
   if(state) renderGlobalAlert(); // le bouton "J'ai traité" de l'alerte depend aussi de bleConnected
 }
