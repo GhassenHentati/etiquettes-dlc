@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const { pool, initDb } = require('./db');
+const foodcostRouter = require('./foodcost');
 
 const app = express();
 app.use(express.json());
@@ -629,6 +630,10 @@ app.delete('/api/employees/:id', wrap(async (req, res) => {
   }
   res.json({ ok: true });
 }));
+
+// ---------- Food cost (inventaire valorise, voir foodcost.js) ----------
+
+app.use('/api/fc', foodcostRouter);
 
 // ---------- Demarrage ----------
 

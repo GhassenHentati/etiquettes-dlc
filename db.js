@@ -96,7 +96,91 @@ async function initDb() {
       at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE;
+
+    -- ---------- Food cost (inventaire mensuel valorise) ----------
+    -- Etageres / zones de stock : propres a un restaurant (objets physiques).
+    CREATE TABLE IF NOT EXISTS fc_shelves (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    -- Article stocke : prix d'achat en CHF par unite. Un article deja compte
+    -- dans un inventaire est archive plutot que supprime, pour garder
+    -- l'historique des inventaires lisible.
+    CREATE TABLE IF NOT EXISTS fc_items (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      shelf_id INTEGER REFERENCES fc_shelves(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      unit TEXT NOT NULL DEFAULT 'pce',
+      price NUMERIC(12,4) NOT NULL DEFAULT 0,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    -- Type de marchandise (matieres premieres, emballages...) : c'est par
+    -- type, et non par etagere, que le gerant veut les totaux.
+    CREATE TABLE IF NOT EXISTS fc_types (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    ALTER TABLE fc_items ADD COLUMN IF NOT EXISTS type_id INTEGER REFERENCES fc_types(id) ON DELETE SET NULL;
+
+    -- Deuxieme unite facultative pour la marchandise entamee : un carton de
+    -- poulet (unite principale, prix du carton) peut aussi se compter en kg
+    -- une fois deballe. unit2_per_unit = nombre d'unites 2 dans une unite
+    -- principale (ex. 10 kg par carton) ; le prix au kg en decoule.
+    ALTER TABLE fc_items ADD COLUMN IF NOT EXISTS unit2 TEXT;
+    ALTER TABLE fc_items ADD COLUMN IF NOT EXISTS unit2_per_unit NUMERIC(12,4);
+    ALTER TABLE fc_counts ADD COLUMN IF NOT EXISTS qty2 NUMERIC(12,3);
+    ALTER TABLE fc_counts ADD COLUMN IF NOT EXISTS unit2_per_unit NUMERIC(12,4);
+    ALTER TABLE fc_counts ALTER COLUMN qty DROP NOT NULL;
+
+    -- Un inventaire = un comptage a une date. Achats et chiffre d'affaires
+    -- concernent la periode qui se termine a cet inventaire.
+    CREATE TABLE IF NOT EXISTS fc_inventories (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      inv_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      status TEXT NOT NULL DEFAULT 'open',
+      purchases NUMERIC(12,2),
+      sales NUMERIC(12,2),
+      closed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    -- unit_price reste NULL tant que l'inventaire est ouvert (on valorise au
+    -- prix actuel de l'article) et est fige a la cloture.
+    CREATE TABLE IF NOT EXISTS fc_counts (
+      inventory_id INTEGER NOT NULL REFERENCES fc_inventories(id) ON DELETE CASCADE,
+      item_id INTEGER NOT NULL REFERENCES fc_items(id) ON DELETE CASCADE,
+      qty NUMERIC(12,3) NOT NULL,
+      unit_price NUMERIC(12,4),
+      counted_by TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (inventory_id, item_id)
+    );
   `);
+
+  // Food cost : un type de marchandise peut etre exclu du calcul (produits de
+  // nettoyage). A l'ajout de la colonne, on exclut les types "nettoyage"
+  // deja existants ; ensuite c'est le gerant qui decide.
+  const { rows: fcCol } = await pool.query(`
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'fc_types' AND column_name = 'in_food_cost'
+  `);
+  if (!fcCol.length) {
+    await pool.query('ALTER TABLE fc_types ADD COLUMN in_food_cost BOOLEAN NOT NULL DEFAULT true');
+    await pool.query(`UPDATE fc_types SET in_food_cost = false WHERE name ILIKE '%nettoy%'`);
+  }
 
   // Mot de passe administrateur par defaut au tout premier lancement.
   await pool.query(
