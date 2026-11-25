@@ -73,6 +73,9 @@ async function initDb() {
       delay_days INTEGER NOT NULL DEFAULT 3,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    -- "icon:<cle>" pour une icone integree, ou une data URI / URL pour une
+    -- vraie photo envoyee par l'admin depuis l'app.
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;
 
     CREATE TABLE IF NOT EXISTS product_restaurants (
       product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,

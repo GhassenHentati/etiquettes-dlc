@@ -182,7 +182,7 @@ app.get('/api/state', wrap(async (req, res) => {
       [restaurantId]
     ),
     pool.query(
-      `SELECT p.id, p.name, p.category_id, p.delay_days,
+      `SELECT p.id, p.name, p.category_id, p.delay_days, p.image_url,
               pr.fridge_id, pr.last_print_date, pr.last_dlc_date, pr.last_print_employee
        FROM products p
        JOIN product_restaurants pr ON pr.product_id = p.id
@@ -402,23 +402,23 @@ app.delete('/api/fridges/:id', wrap(async (req, res) => {
 // ---------- Produits (definition partagee, suivi par restaurant) ----------
 
 app.post('/api/products', wrap(async (req, res) => {
-  const { name, categoryId, fridgeId, delayDays, restaurantId, otherRestaurantIds } = req.body || {};
+  const { name, categoryId, fridgeId, delayDays, restaurantId, otherRestaurantIds, imageUrl } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: 'Nom requis' });
   if (!categoryId) return res.status(400).json({ error: 'Categorie requise' });
   if (!fridgeId) return res.status(400).json({ error: 'Frigo requis' });
   if (!restaurantId) return res.status(400).json({ error: 'Restaurant requis' });
 
   const { rows } = await pool.query(
-    `INSERT INTO products (name, category_id, delay_days)
-     VALUES ($1, $2, $3) RETURNING id`,
-    [name.trim(), categoryId, Math.max(1, parseInt(delayDays, 10) || 3)]
+    `INSERT INTO products (name, category_id, delay_days, image_url)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [name.trim(), categoryId, Math.max(1, parseInt(delayDays, 10) || 3), imageUrl || null]
   );
   await syncProductRestaurants(rows[0].id, categoryId, restaurantId, fridgeId, otherRestaurantIds);
   res.json({ id: rows[0].id });
 }));
 
 app.put('/api/products/:id', wrap(async (req, res) => {
-  const { name, categoryId, fridgeId, delayDays, restaurantId, otherRestaurantIds } = req.body || {};
+  const { name, categoryId, fridgeId, delayDays, restaurantId, otherRestaurantIds, imageUrl } = req.body || {};
   const fields = [];
   const values = [];
   let i = 1;
@@ -426,6 +426,7 @@ app.put('/api/products/:id', wrap(async (req, res) => {
   if (name !== undefined)      { fields.push(`name = $${i++}`);        values.push(name.trim()); }
   if (categoryId !== undefined){ fields.push(`category_id = $${i++}`); values.push(categoryId); }
   if (delayDays !== undefined) { fields.push(`delay_days = $${i++}`);  values.push(Math.max(1, parseInt(delayDays, 10) || 1)); }
+  if (imageUrl !== undefined)  { fields.push(`image_url = $${i++}`);   values.push(imageUrl || null); }
 
   if (fields.length) {
     values.push(req.params.id);

@@ -112,10 +112,14 @@
   .alert-banner .more-note{ font-size:11px; color:var(--warn); margin-top:8px; text-align:right; }
   .no-alert{ font-size:12px; color:var(--muted); margin-bottom:16px; }
 
-  .prod-row{ display:flex; align-items:center; justify-content:space-between; padding:14px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .prod-row{ display:flex; align-items:center; justify-content:space-between; padding:14px 4px; border-bottom:1px solid var(--line); cursor:pointer; gap:10px; }
   .prod-row:last-child{ border-bottom:none; }
-  .prod-row .name{ font-size:14px; }
-  .prod-row .right{ display:flex; align-items:center; gap:8px; }
+  .prod-row .left{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .prod-row .name{ font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .prod-row .right{ display:flex; align-items:center; gap:8px; flex:none; }
+  .prod-thumb{ border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .prod-thumb svg{ width:60%; height:60%; }
+  .prod-thumb img{ width:100%; height:100%; object-fit:cover; }
   .prod-row .delay{ font-size:12px; color:var(--muted); }
   .fridge-tag{ font-size:11px; color:var(--fresh); border:1px solid var(--fresh); border-radius:20px; padding:2px 8px; white-space:nowrap; }
   .fridge-tag.expired{ color:var(--warn); border-color:var(--warn); }
@@ -310,6 +314,10 @@
       <div class="titles"><div class="title" id="prod-title"></div><div class="sub" id="prod-sub"></div></div>
     </header>
     <div class="body-pad">
+      <div style="text-align:center;margin-bottom:16px;">
+        <div id="prod-photo-wrap" style="display:inline-block;"></div>
+        <div class="btn-danger-text" id="prod-photo-edit" style="color:var(--muted);margin-top:8px;display:none;" onclick="openChangePhoto()">Changer la photo</div>
+      </div>
       <div class="field" id="prod-name-field" style="display:none;">
         <label>Nom du produit</label>
         <div class="value-row" onclick="editProductName()" style="cursor:pointer;">
@@ -448,7 +456,7 @@
       <h1 style="font-family:'Archivo Narrow',sans-serif;font-size:19px;margin:0 0 8px 0;">Étiquette envoyée</h1>
       <p style="color:var(--muted);font-size:13px;margin:0 0 26px 0;">L'imprimante à étiquettes va sortir<br>le ticket autocollant.</p>
       <button class="btn-primary" style="max-width:220px;margin:0 auto;" onclick="backToCategoryProducts()">Retour</button>
-      <p style="color:var(--muted);font-size:12px;margin-top:16px;">Déconnexion dans <span id="printed-countdown">30</span> s</p>
+      <p style="color:var(--muted);font-size:12px;margin-top:16px;">Retour automatique dans <span id="printed-countdown">3</span> s</p>
     </div>
   </div>
 
@@ -542,6 +550,7 @@ function normalizeState(raw){
       categoryId: String(p.category_id),
       fridgeId: p.fridge_id === null ? null : String(p.fridge_id),
       delayDays: p.delay_days,
+      imageUrl: p.image_url || null,
       lastPrinted: p.last_dlc_date ? {
         printDate: String(p.last_print_date).slice(0,10),
         dlcDate: String(p.last_dlc_date).slice(0,10),
@@ -618,6 +627,74 @@ function goBack(){
 /* ---------------- Helpers ---------------- */
 function fridgeName(id){ const f = state.fridges.find(x=>x.id===id); return f ? f.name : '—'; }
 function categoryProducts(catId){ return state.products.filter(p=>p.categoryId===catId); }
+
+/* ---------------- Photos produit ---------------- */
+// Chaque produit peut avoir une vraie photo (imageUrl = data URI/URL, envoyee
+// depuis "Changer la photo") ou utiliser une icone integree ("icon:<cle>").
+// Sans rien de defini, on devine une icone a partir du nom pour les produits
+// courants, et on retombe sur une icone generique sinon.
+const BUILTIN_ICONS = {
+  salade: { bg:'#E4F3E0', fg:'#3E7A54', svg:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 11c1-3 4-5 9-5s8 2 9 5"/>
+      <path d="M3 11h18l-1.4 6.5A2 2 0 0 1 17.6 19H6.4a2 2 0 0 1-2-1.5L3 11z"/>
+    </svg>` },
+  tomate: { bg:'#FBE2DC', fg:'#C1402A', svg:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="13" r="7.5"/>
+      <path d="M8 4.2c1 .8 1.6 1.3 4 1.3s3-.5 4-1.3M12 5.5v2"/>
+    </svg>` },
+  oignon: { bg:'#F3E8FB', fg:'#7A4FA0', svg:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4c-1.2 1.6-1.6 2.6-1.6 3.6C7.6 8.6 5.5 11.4 5.5 14.5 5.5 18 8.4 21 12 21s6.5-3 6.5-6.5c0-3.1-2.1-5.9-4.9-6.9 0-1-.4-2-1.6-3.6z"/>
+      <path d="M9.5 10.5V19M14.5 10.5V19"/>
+    </svg>` },
+  bacon: { bg:'#FBE2E8', fg:'#B5456B', svg:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7c3-3 5 1 8-1s5 1 8-1"/>
+      <path d="M3 12c3-3 5 1 8-1s5 1 8-1"/>
+      <path d="M3 17c3-3 5 1 8-1s5 1 8-1"/>
+    </svg>` },
+  'viande-cuite': { bg:'#F0E3D6', fg:'#8B5A2B', svg:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="12" cy="13" rx="8" ry="6"/>
+      <path d="M7 10l3 3M11 9l3 4M15 10l2 3"/>
+    </svg>` },
+  'viande-crue': { bg:'#FADCDC', fg:'#B23A3A', svg:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 14c-1-3 1-6 4-7 1-1 4-1 5 0 3 1 5 4 4 7-1 3-5 4-7 4s-5-1-6-4z"/>
+      <circle cx="10" cy="12" r=".5" fill="currentColor" stroke="none"/>
+      <circle cx="13.5" cy="13.5" r=".5" fill="currentColor" stroke="none"/>
+      <circle cx="11" cy="16" r=".5" fill="currentColor" stroke="none"/>
+    </svg>` },
+  default: { bg:'#EFEFEF', fg:'#8593A0', svg:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/>
+      <path d="M9 8v3.5M7.3 8v3.5M7.3 11.5c0 1 .8 1.5 1.7 1.5v4.5M16 8v9"/>
+    </svg>` }
+};
+function guessBuiltinIconKey(name){
+  const n = (name || '').toLowerCase();
+  if(n.includes('salade')) return 'salade';
+  if(n.includes('tomate')) return 'tomate';
+  if(n.includes('oignon') || n.includes('ognion')) return 'oignon';
+  if(n.includes('bacon')) return 'bacon';
+  if(n.includes('hach')){
+    if(n.includes('cru')) return 'viande-crue';
+    if(n.includes('cuit')) return 'viande-cuite';
+  }
+  return 'default';
+}
+function productImageHtml(p, size){
+  size = size || 44;
+  const raw = p.imageUrl;
+  if(raw && !raw.startsWith('icon:')){
+    return `<div class="prod-thumb" style="width:${size}px;height:${size}px;"><img src="${raw}" alt=""></div>`;
+  }
+  const key = raw ? raw.slice(5) : guessBuiltinIconKey(p.name);
+  const icon = BUILTIN_ICONS[key] || BUILTIN_ICONS.default;
+  return `<div class="prod-thumb" style="width:${size}px;height:${size}px;background:${icon.bg};color:${icon.fg};">${icon.svg}</div>`;
+}
 function isExpired(p){
   if(!p.lastPrinted) return false;
   return todayISO() > p.lastPrinted.dlcDate;
@@ -832,7 +909,7 @@ async function printLabelBluetooth(productName, fridgeNameStr, printDateISO, dlc
 
 /* ---------------- Auto-logout ---------------- */
 const IDLE_MS = 60000;        // 1 minute sans activité
-const PRINTED_MS = 30000;     // 30 s sur l'écran de confirmation d'impression
+const PRINTED_MS = 3000;      // 3 s sur l'écran de confirmation d'impression
 let idleTimer = null;
 let printedTimer = null;
 let countdownTimer = null;
@@ -847,6 +924,14 @@ function autoLogout(){
   closeModal();
   logout();
 }
+// Apres impression, retour automatique vers la liste de la categorie
+// imprimee (pas une deconnexion : il n'y a plus de session employe a
+// fermer, et un admin ne doit pas etre ejecte de Gestion pour autant).
+function autoReturnFromPrinted(){
+  clearAutoLogout();
+  closeModal();
+  backToCategoryProducts();
+}
 function resetIdleTimer(){
   if(idleTimer){ clearTimeout(idleTimer); idleTimer = null; }
   // Pas de minuterie si personne n'est connecté
@@ -856,7 +941,6 @@ function resetIdleTimer(){
 function armPrintedTimer(){
   if(printedTimer){ clearTimeout(printedTimer); printedTimer = null; }
   if(countdownTimer){ clearInterval(countdownTimer); countdownTimer = null; }
-  if(!currentUser) return;
   let left = PRINTED_MS / 1000;
   const el = document.getElementById('printed-countdown');
   if(el) el.textContent = left;
@@ -866,7 +950,7 @@ function armPrintedTimer(){
     if(e) e.textContent = Math.max(0,left);
     if(left <= 0) clearInterval(countdownTimer);
   }, 1000);
-  printedTimer = setTimeout(autoLogout, PRINTED_MS);
+  printedTimer = setTimeout(autoReturnFromPrinted, PRINTED_MS);
 }
 ['click','touchstart','keydown'].forEach(evt=>{
   document.addEventListener(evt, ()=>{
@@ -1159,7 +1243,7 @@ function renderProducts(){
   let rows = prods.map(p=>{
     const exp = isExpired(p);
     return `<div class="prod-row" onclick="openProduct('${p.id}')">
-      <div class="name">${p.name}</div>
+      <div class="left">${productImageHtml(p, 40)}<div class="name">${p.name}</div></div>
       <div class="right"><span class="fridge-tag ${exp?'expired':''}">${fridgeName(p.fridgeId)}</span><span class="delay">+${p.delayDays} j</span></div>
     </div>`;
   }).join('');
@@ -1247,8 +1331,64 @@ function renderProductDetail(){
   if(catField) catField.style.display = isAdmin ? '' : 'none';
   document.getElementById('prod-name-label').textContent = p.name;
   document.getElementById('prod-category-label').textContent = cat ? cat.name : '—';
+  document.getElementById('prod-photo-wrap').innerHTML = productImageHtml(p, 88);
+  const photoEditBtn = document.getElementById('prod-photo-edit');
+  if(photoEditBtn) photoEditBtn.style.display = isAdmin ? '' : 'none';
   printQty = 1;
   renderPrintQty();
+}
+// Choix d'une icone integree ou envoi d'une vraie photo (redimensionnee et
+// compressee cote tablette avant envoi, pour rester leger en base).
+async function openChangePhoto(){
+  const p = state.products.find(x=>x.id===ctx.productId);
+  if(!p) return;
+  const iconKeys = Object.keys(BUILTIN_ICONS);
+  const choice = await uiChoose(
+    'Photo du produit',
+    [...iconKeys.map(k=>'Icône : ' + k), 'Envoyer une photo depuis la tablette'],
+    p.name
+  );
+  if(choice===null) return;
+  if(choice < iconKeys.length){
+    try{
+      await api('/products/' + p.id, { method:'PUT', body: JSON.stringify({ imageUrl: 'icon:' + iconKeys[choice] }) });
+      await syncState();
+    }catch(e){ await uiAlert(e.message); }
+    return;
+  }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if(!file) return;
+    try{
+      const dataUrl = await resizeImageToDataUrl(file, 480, 0.75);
+      await api('/products/' + p.id, { method:'PUT', body: JSON.stringify({ imageUrl: dataUrl }) });
+      await syncState();
+    }catch(e){ await uiAlert(e.message || 'Photo invalide.'); }
+  };
+  input.click();
+}
+// Redimensionne et compresse cote client : une photo de telephone (plusieurs
+// Mo) depasserait vite la limite de la requete API et alourdirait la base.
+function resizeImageToDataUrl(file, maxSize, quality){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Lecture du fichier impossible.'));
+    reader.onload = () => { img.src = reader.result; };
+    img.onerror = () => reject(new Error('Image invalide.'));
+    img.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    reader.readAsDataURL(file);
+  });
 }
 async function editProductName(){
   const p = state.products.find(x=>x.id===ctx.productId);
@@ -1634,6 +1774,7 @@ function renderManageProds(body){
   let rows = state.products.map(p=>{
     const cat = state.categories.find(c=>c.id===p.categoryId);
     return `<div class="manage-row">
+      ${productImageHtml(p, 36)}
       <div class="info"><div class="mname">${p.name}</div><div class="msub">${cat?cat.name:'—'} · ${fridgeName(p.fridgeId)} · +${p.delayDays} j</div></div>
       <div class="mactions">
         <button onclick="ctx.categoryId='${p.categoryId}';ctx.productId='${p.id}';historyStack=['manage'];show('product');renderProductDetail();">Ouvrir</button>
