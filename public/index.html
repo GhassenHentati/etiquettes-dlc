@@ -77,6 +77,13 @@
   .tile .cat-actions{ display:flex; gap:8px; border-top:1px solid var(--line); padding-top:8px; margin-top:auto; }
   .tile .cat-actions button{ flex:1; padding:9px 0; border:1px solid var(--line); border-radius:999px; background:var(--surface); font-size:12px; color:var(--muted); cursor:pointer; font-family:inherit; }
   .tile .cat-actions button.danger{ color:var(--warn); border-color:var(--warn); }
+  /* Tuiles produit (liste a imprimer) : meme bouton que les categories, mais
+     centre sur la photo/icone qui devient le vrai repere visuel. */
+  .prod-tile{ align-items:center; text-align:center; cursor:pointer; justify-content:center; }
+  .prod-tile .prod-thumb{ margin:0 auto 8px auto; }
+  .prod-tile .name{ font-family:var(--font-b); font-weight:600; font-size:14px; }
+  .prod-tile .count{ margin-top:6px; display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; font-size:12px; color:var(--muted); }
+  .prod-tile.expired{ border-color:var(--warn); }
 
   #global-alert{ padding:0; }
   #global-alert .alert-banner{ margin:12px 14px 0 14px; }
@@ -1242,17 +1249,20 @@ function renderProducts(){
   const prods = categoryProducts(ctx.categoryId);
   document.getElementById('cat-sub').textContent = prods.length + ' produit' + (prods.length>1?'s':'');
   const body = document.getElementById('products-body');
-  let rows = prods.map(p=>{
+  const isAdmin = currentUser && currentUser.type==='admin';
+  // Meme presentation en grosses tuiles que les categories : la photo/icone
+  // devient le vrai repere visuel pour choisir le bon produit a imprimer.
+  let tiles = prods.map(p=>{
     const exp = isExpired(p);
-    return `<div class="prod-row ${exp?'expired':''}" onclick="openProduct('${p.id}')">
-      <div class="left">${productImageHtml(p, 40)}<div class="name">${p.name}</div></div>
-      <div class="right"><span class="fridge-tag ${exp?'expired':''}">${fridgeName(p.fridgeId)}</span><span class="delay">+${p.delayDays} j</span></div>
+    return `<div class="tile prod-tile ${exp?'expired':''}" onclick="openProduct('${p.id}')">
+      ${productImageHtml(p, 64)}
+      <div class="name">${p.name}</div>
+      <div class="count"><span class="fridge-tag ${exp?'expired':''}">${fridgeName(p.fridgeId)}</span> +${p.delayDays} j</div>
     </div>`;
   }).join('');
-  if(!prods.length) rows = `<div class="empty-hint">Aucun produit dans cette catégorie pour l'instant.</div>`;
-  const isAdmin = currentUser && currentUser.type==='admin';
-  const addLine = isAdmin ? `<div class="add-line" onclick="openAddProduct()">+ Ajouter un produit</div>` : '';
-  body.innerHTML = rows + addLine;
+  const addTile = isAdmin ? `<div class="tile add" onclick="openAddProduct()">+ Ajouter un produit</div>` : '';
+  const empty = prods.length ? '' : `<div class="empty-hint">Aucun produit dans cette catégorie pour l'instant.</div>`;
+  body.innerHTML = empty + `<div class="grid-tiles">${tiles}${addTile}</div>`;
 }
 function openProduct(prodId){ ctx.productId = prodId; go('product'); renderProductDetail(); }
 // Apres impression, revenir direct sur la liste de la categorie imprimee
